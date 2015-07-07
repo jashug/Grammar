@@ -13,3 +13,6 @@ class Expire(object):
             t, q = self.queue.pop()
             self.triage.schedule(q, t)
         return self.triage.recommend(time)
+
+    def __contains__(self, q):
+        return q in self.queue or q in self.triage

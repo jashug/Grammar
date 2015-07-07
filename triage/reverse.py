@@ -9,3 +9,6 @@ class ReverseTriage(object):
 
     def recommend(self, time):
         return iter(self.queue)
+
+    def __contains__(self, q):
+        return q in self.queue
