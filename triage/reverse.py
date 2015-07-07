@@ -8,7 +8,4 @@ class ReverseTriage(object):
         self.queue.put(q, -time)
 
     def recommend(self, time):
-        if len(self.queue) > 0:
-            t, q = self.queue.peek()
-            return q
-        return None
+        return iter(self.queue)
