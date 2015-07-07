@@ -84,6 +84,19 @@ class Heap(object):
         self._setheap(pos, newitem)
         self._siftdown(startpos, pos)
 
+    def __iter__(self):
+        secondary = Heap()
+        if 0 < len(self):
+            secondary.put(0, self.heap[0][0])
+        while len(secondary) > 0:
+            p, i = secondary.pop()
+            yield self.heap[i]
+            left, right = 2 * i + 1, 2 * i + 2
+            if left < len(self):
+                secondary.put(left, self.heap[left][0])
+            if right < len(self):
+                secondary.put(right, self.heap[right][0])            
+
 if __name__ == "__main__":
     print "Testing..."
     h = Heap()
@@ -94,6 +107,9 @@ if __name__ == "__main__":
     h.put('f', 2.5)
     h.put('z',-1)
     h.remove('d')
+    comp = [(-1, 'z'), (0, 'a'), (2, 'c'), (2.5, 'f'), (4, 'e'),
+            (5.5, 'b'), (6, 'g'), (7, 'h'), (8, 'i'), (9, 'j')]
+    assert list(h) == comp
     l = []
     while len(h) > 0:
         l.append(h.pop())
