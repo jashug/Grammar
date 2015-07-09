@@ -8,7 +8,13 @@ class ReverseTriage(object):
         self.queue.put(q, -time)
 
     def recommend(self, time):
-        return iter(self.queue)
+        for t, q in self.queue:
+            t = -t
+            yield q
 
     def __contains__(self, q):
         return q in self.queue
+
+    def remove(self, q):
+        if q in self.queue:
+            self.queue.remove(q)

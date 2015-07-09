@@ -6,6 +6,7 @@ class Expire(object):
         self.queue = Heap()
 
     def schedule(self, q, time):
+        self.triage.remove(q)
         self.queue.put(q, time)
 
     def recommend(self, time):
@@ -16,3 +17,9 @@ class Expire(object):
 
     def __contains__(self, q):
         return q in self.queue or q in self.triage
+
+    def remove(self, q):
+        if q in self.queue:
+            self.queue.remove(q)
+        if q in self.triage:
+            self.triage.remove(q)

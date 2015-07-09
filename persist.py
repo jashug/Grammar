@@ -1,4 +1,4 @@
-def Persist(object):
+class Persist(object):
     def __init__(self, backingFileName):
         self.path = backingFileName
         self.outFile = None
@@ -14,3 +14,12 @@ def Persist(object):
     def record(self, q, correct, time):
         self.outFile.write("%(tag)s %(time).3f %(grade)s\n" % {
             'tag': q, 'time':time, 'grade':'1' if correct else '0'})
+
+def replay(backingFile, pack):
+    with open(backingFile, 'r') as f:
+        for line in f:
+            assert line[-1] == '\n'
+            q, time, correct = line[:-1].split()
+            q, time, correct = q, float(time), correct == '1'
+            pack.record(q, correct, time, False)
+    return pack

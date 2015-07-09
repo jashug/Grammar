@@ -1,4 +1,4 @@
-def Jas1Scheduler(object):
+class Jas1Scheduler(object):
     def __init__(self, ratio=2, limit=4, baseInterval=10):
         self.lastTimes = {}
         self.ratio = ratio
