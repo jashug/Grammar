@@ -14,6 +14,7 @@ def main():
         context = pickle.load(f)
 
     print "Welcome to the Quiz program (2.0)"
+    pack.stats(time.time())
     sentry = raw_input("Press enter to begin (non-empty to stop): ")
     if sentry: return
     
@@ -31,6 +32,7 @@ def main():
     end = time.time()
     dt = end - start
 
+    pack.stats(time.time())
     print "You missed %d problems." % wrong
     print "You answered %d problems in %d minutes %d seconds." %\
           (total, dt // 60, dt % 60)

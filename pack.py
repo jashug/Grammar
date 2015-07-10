@@ -23,3 +23,7 @@ class Pack(object):
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self.persist.__exit__(exc_type, exc_value, exc_tb)
+
+    def stats(self, time):
+        self.triage.stats(time)
+        self.feed.stats()
