@@ -14,7 +14,9 @@ def main():
         context = pickle.load(f)
 
     print "Welcome to the Quiz program (2.0)"
-    sentry = raw_input("Press enter to begin (non-empty to stop):")
+    sentry = raw_input("Press enter to begin (non-empty to stop): ")
+    if sentry: return
+    
     start = time.time()
     total, wrong = 0, 0
 
@@ -24,7 +26,7 @@ def main():
 
             if not correct: wrong += 1
             total += 1
-            sentry = raw_input("Continue? (non-empty to stop):")
+            sentry = raw_input("Continue? (non-empty to stop): ")
 
     end = time.time()
     dt = end - start
