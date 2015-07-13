@@ -1,3 +1,4 @@
+from collections import defaultdict
 from heap import Heap
 
 class Expire(object):
@@ -18,14 +19,10 @@ class Expire(object):
         self.shift(time)
         return self.triage.recommend(time)
 
-    def __contains__(self, q):
-        return q in self.queue or q in self.triage
-
     def remove(self, q):
         if q in self.queue:
             self.queue.remove(q)
-        if q in self.triage:
-            self.triage.remove(q)
+        self.triage.remove(q)
 
     def stats(self, time):
         self.shift(time)
@@ -40,11 +37,7 @@ class Reverse(object):
 
     def recommend(self, time):
         for t, q in self.queue:
-            t = -t
-            yield q
-
-    def __contains__(self, q):
-        return q in self.queue
+            yield t, q
 
     def remove(self, q):
         if q in self.queue:
@@ -55,3 +48,34 @@ class Reverse(object):
 
 def ReverseTriage():
     return Expire(Reverse())
+
+class Category(object):
+    def __init__(self, triageClass):
+        self.groups = defaultdict(triageClass)
+
+    def schedule(self, group, q, time):
+        self.groups[group].schedule(q, time)
+
+    def recommend(self, time):
+        def attempt(it):
+            try:
+                return it.next()
+            except:
+                return float('inf'), None
+        iters, saved = {}, {}
+        for group in self.groups:
+            iters[group] = self.groups[group].recommend(time)
+            saved[group] = attempt(iters[group])
+        groups = yield
+        while True:
+            (t, q), group = min((saved[group], group) for group in groups)
+            if t == float('inf'):
+                raise StopIteration()
+            saved[group] = attempt(iters[group])
+            groups = yield q
+
+    def stats(self, time):
+        pass
+
+def CategoryReverseTriage():
+    return Category(ReverseTriage)

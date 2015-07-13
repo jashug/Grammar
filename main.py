@@ -1,7 +1,7 @@
 import time
 import cPickle as pickle
 
-from builder import askQuestion
+import builder
 
 cacheFile = "records/pack.pkl"
 contextFile = "records/context.pkl"
@@ -45,7 +45,7 @@ def main():
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
 
-def pack():
+def packSimple():
     from questions.japQuestions import addJapaneseQuestions
     from feed import Feed
     from scheduler import Jas1Scheduler
@@ -64,3 +64,26 @@ def pack():
         pickle.dump(qs, f, -1)
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
+
+def packCategories():
+    from questions.japQuestions import addJapaneseQuestions
+    from feed import CategoryFeed
+    from scheduler import Jas1Scheduler
+    from triage import CategoryReverseTriage
+    from pack import CategoryPack
+    from persist import Persist, replay
+    qs = {}
+    ordered, kanji, vocab, chunks = \
+             addJapaneseQuestions(qs, "questions/vocabPickle.pkl")
+    print "Got questions"
+    feed = CategoryFeed([(q, 'jap') for q in ordered], {})
+    pack = CategoryPack(feed, CategoryReverseTriage(),
+                        Jas1Scheduler(), Persist("records/records.txt"))
+    replay("records/records.txt", pack)
+    with open(contextFile, 'wb') as f:
+        pickle.dump(qs, f, -1)
+    with open(cacheFile, 'wb') as f:
+        pickle.dump(pack, f, -1)
+
+pack = packCategories
+askQuestion = builder.askQuestionCategories

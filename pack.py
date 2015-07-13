@@ -7,7 +7,7 @@ class Pack(object):
 
     def getQuestion(self, time):
         try:
-            return self.triage.recommend(time).next()
+            return self.triage.recommend(time).next()[1]
         except StopIteration:
             return self.feed.getQuestion()
 
@@ -27,3 +27,26 @@ class Pack(object):
     def stats(self, time):
         self.triage.stats(time)
         self.feed.stats()
+
+class CategoryPack(Pack):
+    def getQuestion(self, time):
+        triage = self.triage.recommend(time)
+        triage.next()
+        feed = self.feed.getQuestion()
+        feed.next()
+        
+        category = yield
+        while True:
+            groups = self.feed.getGroups(category)
+            try:
+                category = yield triage.send(groups)
+            except StopIteration:
+                category = yield feed.send(groups)
+
+    def record(self, q, correct, time, persist=True):
+        self.feed.mark(q)
+        group = self.feed.find(q)
+        nextTime = self.scheduler.schedule(q, correct, time)
+        self.triage.schedule(group, q, nextTime)
+        if persist:
+            self.persist.record(q, correct, time)
