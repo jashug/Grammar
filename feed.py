@@ -28,6 +28,9 @@ class CategoryFeed(object):
             self.ordered.append(q)
             self.mapping[q] = group
             self.indexes[group].append(i)
+        for group in self.indexes:
+            self.indexes[group].append(len(self.ordered))
+        self.ordered.append(None)
         self.iters = {}
         self.categories = categories
         assert '*' not in self.categories
@@ -54,6 +57,8 @@ class CategoryFeed(object):
         while True:
             q = self.ordered[min(self.indexes[group][iters[group]]
                                  for group in groups)]
+            if q is None:
+                raise StopIteration(groups)
             iters[self.mapping[q]] += 1
             self.update(iters, self.mapping[q])
             groups = yield q

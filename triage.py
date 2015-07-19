@@ -57,12 +57,13 @@ class Category(object):
         self.groups[group].schedule(q, time)
 
     def recommend(self, time):
+        inf = (float('inf'), None)
         def attempt(it):
             try:
                 return it.next()
-            except:
-                return float('inf'), None
-        iters, saved = {}, {}
+            except StopIteration:
+                return inf
+        iters, saved = {}, defaultdict(lambda :inf)
         for group in self.groups:
             iters[group] = self.groups[group].recommend(time)
             saved[group] = attempt(iters[group])

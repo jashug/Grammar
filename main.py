@@ -23,7 +23,11 @@ def main():
 
     with pack:
         while not sentry:
-            correct = askQuestion(pack, context, time.time())
+            try:
+                correct = askQuestion(pack, context, time.time())
+            except StopIteration as e:
+                print "Out of cards in:", e.message
+                break
 
             if not correct: wrong += 1
             total += 1
@@ -36,11 +40,12 @@ def main():
     print "You missed %d problems." % wrong
     print "You answered %d problems in %d minutes %d seconds." %\
           (total, dt // 60, dt % 60)
-    print "That is %.3f seconds per problem, or %.3f problems per minute" %\
-          (dt / total, 60 * total / dt)
-    print "Your accuracy was %d%%, or %s:1 right:wrong" %\
-          (100*float(total-wrong)/total,
-           ("%.1f"%(float(total-wrong)/wrong)) if wrong > 0 else "inf")
+    if total > 0:
+        print "That is %.3f seconds per problem, or %.3f problems per minute"%\
+              (dt / total, 60 * total / dt)
+        print "Your accuracy was %d%%, or %s:1 right:wrong" %\
+              (100*float(total-wrong)/total,
+               ("%.1f"%(float(total-wrong)/wrong)) if wrong > 0 else "inf")
 
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
@@ -85,5 +90,23 @@ def packCategories():
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
 
-pack = packCategories
+def packCategoriesTest():
+    from questions.testCategoryQuestions import addQuestions
+    from feed import CategoryFeed
+    from scheduler import Jas1Scheduler
+    from triage import CategoryReverseTriage
+    from pack import CategoryPack
+    from persist import Persist, replay
+    qs = {}
+    ordered, categories = addQuestions(qs)
+    feed = CategoryFeed(ordered, categories)
+    pack = CategoryPack(feed, CategoryReverseTriage(),
+                        Jas1Scheduler(), Persist("records/records.txt"))
+    replay("records/records.txt", pack, qs)
+    with open(contextFile, 'wb') as f:
+        pickle.dump(qs, f, -1)
+    with open(cacheFile, 'wb') as f:
+        pickle.dump(pack, f, -1)
+    
+setup = packCategoriesTest
 askQuestion = builder.askQuestionCategories
