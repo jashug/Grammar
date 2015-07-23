@@ -71,20 +71,18 @@ def packSimple():
         pickle.dump(pack, f, -1)
 
 def packCategories():
-    from questions.japQuestions import addJapaneseQuestions
+    from questions.grammarQuestions import addQuestions
     from feed import CategoryFeed
     from scheduler import Jas1Scheduler
     from triage import CategoryReverseTriage
     from pack import CategoryPack
     from persist import Persist, replay
     qs = {}
-    ordered, kanji, vocab, chunks = \
-             addJapaneseQuestions(qs, "questions/vocabPickle.pkl")
-    print "Got questions"
-    feed = CategoryFeed([(q, 'jap') for q in ordered], {})
+    ordered, categories = addQuestions(qs, "questions/grammarPickle.pkl")
+    feed = CategoryFeed(ordered, categories)
     pack = CategoryPack(feed, CategoryReverseTriage(),
                         Jas1Scheduler(), Persist("records/records.txt"))
-    replay("records/records.txt", pack)
+    replay("records/records.txt", pack, qs)
     with open(contextFile, 'wb') as f:
         pickle.dump(qs, f, -1)
     with open(cacheFile, 'wb') as f:
@@ -107,6 +105,6 @@ def packCategoriesTest():
         pickle.dump(qs, f, -1)
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
-    
-setup = packCategoriesTest
+
+setup = packCategories
 askQuestion = builder.askQuestionCategories

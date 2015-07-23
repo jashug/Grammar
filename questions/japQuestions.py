@@ -34,7 +34,7 @@ def kanjiSet(keb):
             out.append(c)
     return out
 
-def addJapaneseQuestions(qs, vocabCache=None):
+def addJapaneseQuestions(qs, vocabCache=None, pruneVocab=True):
     orderedKanji = kanjiQuestions.addKanjiToEnglish(qs)
     if vocabCache is None:
         raise Exception("Need Cache")
@@ -77,8 +77,10 @@ def addJapaneseQuestions(qs, vocabCache=None):
         q = orderedVocab[i]
         question = qs[q]
         keb = getKeb(question)
-        # normalize kanji / 1 char vocab (remove 1 char vocab)
-        if isinstance(question, VocabKtoSQuestion) and keb in kanjiIndex:
+        if (isinstance(question, VocabKtoSQuestion) and
+            keb in kanjiIndex and
+            pruneVocab):
+            # normalize kanji / 1 char vocab (remove 1 char vocab)
             ques2 = qs[orderedKanji[kanjiIndex[keb]]]
             ques2.answers += list(question.answers-set(ques2.answers))
             question.answers.update(ques2.answers)

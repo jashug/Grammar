@@ -41,7 +41,10 @@ class CategoryPack(Pack):
             try:
                 category = yield triage.send(groups)
             except StopIteration:
-                category = yield feed.send(groups)
+                try:
+                    category = yield feed.send(groups)
+                except StopIteration:
+                    raise StopIteration(category)
 
     def record(self, q, correct, time, persist=True):
         self.feed.mark(q)
