@@ -240,7 +240,20 @@ def posCategories(possets):
                 categories[name(subset)].append(value(pset))
     return dict(categories)
 
-categories = posCategories(possets)
+categories = {
+    'noun': ['Cn', 'Cn-adv', 'Cn-suf', 'Cn-pref', 'Cn-t'],
+    'verb': ['Caux-v', 'Civ', 'Cv-unspec', 'Cv1', 'Cv1-s',
+             'Cv2a-s', 'Cv2b-k', 'Cv2b-s', 'Cv2d-k', 'Cv2d-s',
+             'Cv2g-k', 'Cv2g-s', 'Cv2h-k', 'Cv2h-s', 'Cv2k-k',
+             'Cv2k-s', 'Cv2m-k', 'Cv2m-s', 'Cv2n-s', 'Cv2r-k',
+             'Cv2r-s', 'Cv2s-s', 'Cv2t-k', 'Cv2t-s', 'Cv2w-s',
+             'Cv2y-k', 'Cv2y-s', 'Cv2z-s', 'Cv4b', 'Cv4g', 'Cv4h', 'Cv4k',
+             'Cv4m', 'Cv4n', 'Cv4r', 'Cv4s', 'Cv4t', 'Cv5aru', 'Cv5b',
+             'Cv5g', 'Cv5k', 'Cv5k-s', 'Cv5m', 'Cv5n', 'Cv5r', 'Cv5r-i',
+             'Cv5s', 'Cv5t', 'Cv5u', 'Cv5u-s', 'Cv5uru', 'Cvi', 'Cvk',
+             'Cvn', 'Cvr', 'Cvs', 'Cvs-c', 'Cvs-i', 'Cvs-s', 'Cvt', 'Cvz'],
+}
+categories.update(posCategories(possets))
 
 revMap = defaultdict(lambda :defaultdict(set))
 for i in range(len(inter)):
@@ -249,6 +262,7 @@ for i in range(len(inter)):
         for sense in entry[1]:
             pos = 'G'+'.'.join(sorted(entities[pos] for pos in sense[-1]))
             for gloss in sense[0]:
+                gloss = voc.elimParens(gloss).lower().strip()
                 revMap[gloss][pos].add((entry[0][0], i))
 revMap.default_factory = None
 
@@ -283,16 +297,17 @@ def add(word):
     dic_word = revMap[word]
     if len(dic_word) > 1:
         print "Multiple POS"
-        pos = 'G' + raw_input("Choose POS (ex: n.vs): ")
+        pos = 'G' + '.'.join(sorted(
+            raw_input("Choose POS (ex: n.vs): ").split('.')))
     else:
         pos = dic_word.keys()[0]
         print "POS:", pos
     posset = set(pos[1:].split('.'))
     values = set()
     excluded = False
-    for pos in dic_word:
-        if posset.issubset(set(pos[1:].split('.'))):
-            values.update(dic_word[pos])
+    for pos2 in dic_word:
+        if posset.issubset(set(pos2[1:].split('.'))):
+            values.update(dic_word[pos2])
         else:
             excluded = True
     if len(values) == 0:
@@ -303,7 +318,7 @@ def add(word):
         print "Some values excluded."
         print "Word prompt:", word
         print "New values:"
-        for val, rank in sorted(values, lambda (val,rank):rank):
+        for val, rank in sorted(values, key=lambda (val,rank):rank):
             print rank, val
     if len(values) == 1:
         print "Exactly one match, adding"

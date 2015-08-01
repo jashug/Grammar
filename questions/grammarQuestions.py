@@ -1,29 +1,35 @@
+# coding=utf-8
+
 import cPickle as pickle
 import base64
+from textwrap import dedent
 from builder import CategoryQuestion, Literal, QuestionThunk
 
 def uid(s):
     """Generate a unique ASCII string for a unicode string."""
     return base64.urlsafe_b64encode(s.encode("UTF-8"))
 
-class Word(CategoryQuestion):
+class TranslationQuestion(CategoryQuestion):
+    @property
+    def prompt(self):
+        return "Translate: %s" % self.rep
+
+class Word(TranslationQuestion):
     q = staticmethod(lambda word, values:'Word.'+uid(word))
     def __init__(self, get, word, values):
         self.values = values
         self.rep = word
-        self.prompt = "Translate %s" % self.rep
         self.parts = [Literal(values, self)]
         self.body = ("The word '%s' can be translated as:\n" % word +
                      '\n'.join(values))
 WordQuestion = lambda word, values:QuestionThunk(Word, word, values)
 
-class Conjugatable(CategoryQuestion):
+class Conjugatable(TranslationQuestion):
     q = staticmethod(lambda word, values, suffix:'Conj.'+uid(word))
     def __init__(self, get, word, values, suffix):
         self.values = values
         self.suffix = suffix
         self.rep = word
-        self.prompt = "Translate %s" % self.rep
         assert all(val.endswith(suffix) for val in values)
         stems = [val[:-len(suffix)] for val in values]
         self.parts = [Literal(stems, self), Literal([suffix], self)]
@@ -32,14 +38,46 @@ class Conjugatable(CategoryQuestion):
 ConjugatableQuestion = (lambda word, values, suffix:
                         QuestionThunk(Conjugatable, word, values, suffix))
 
-grammar = []
-categories = {}
+class Declarative(TranslationQuestion):
+    q = "DeclareDa"
+    body = u"Declare 'is X' with 'Xだ'."
+    def __init__(self, get):
+        self.obj = get('noun')
+        self.rep = "is %s" % self.obj.rep
+        self.parts = [self.obj, Literal([u'だ'], self)]
 
-def expand(cat):
+class NegativeNoun(TranslationQuestion):
+    q = "NegNoun"
+    body = dedent(u"""\
+        Form 'is not X' with 'Xでわない' or 'Xじゃない'.
+        Xじゃない is the more casual form.""")
+    def __init__(self, get):
+        self.obj = get('noun')
+        self.rep = "is not %s" % self.obj.rep
+        self.parts = [self.obj,
+                      Literal([u'でわ', u'じゃ'], self),
+                      Literal([u'ない'], self)]
+
+class PastNoun(TranslationQuestion):
+    q = "PastNoun"
+    body = u"Form 'was X' with 'Xだった'."
+    def __init__(self, get):
+        self.obj = get('noun')
+        self.rep = "was %s" % self.obj.rep
+        self.parts = [self.obj, Literal([u'だった'], self)]
+
+grammar = [
+    (Declarative, 'undec'),
+    (NegativeNoun, 'neg'),
+    (PastNoun, 'undec'),
+]
+global_categories = {}
+
+def expand(categories, cat):
     if cat in categories:
         new = set()
         for group in categories[cat]:
-            new.update(expand(group))
+            new.update(expand(categories, group))
         categories[cat] = new
         return new
     else:
@@ -49,6 +87,7 @@ suffixes = {
 }
 
 def addQuestions(qs, dictCache=None):
+    categories = global_categories.copy()
     if dictCache is None:
         raise Exception("Need Cache")
     with open(dictCache, 'rb') as f:
@@ -57,7 +96,7 @@ def addQuestions(qs, dictCache=None):
         assert cat not in categories
         categories[cat] = baseCategories[cat]
     for cat in categories:
-        expand(cat)
+        expand(categories, cat)
 
     dictionary_list = []
     rank_dict = {}
@@ -84,7 +123,7 @@ def addQuestions(qs, dictCache=None):
         add(group, (i, 0), question)
     for i in range(len(grammar)):
         question, group = grammar[i]
-        add(group, (20 * i, 1), question)
+        add(group, (1 * i, 1), question)
     
     ordered.sort(key=lambda (q, group):rank_dict[q])
     return ordered, categories

@@ -51,11 +51,18 @@ class CategoryFeed(object):
         self.seen.add(q)
         self.update(self.iters, self.mapping[q])
 
+    def getIndex(self, iters, group):
+        if group not in iters or group not in self.indexes:
+            return len(self.ordered) - 1
+        if iters[group] >= len(self.indexes[group]):
+            return len(self.ordered) - 1
+        return self.indexes[group][iters[group]]
+
     def getQuestion(self):
         iters = self.iters.copy()
         groups = yield
         while True:
-            q = self.ordered[min(self.indexes[group][iters[group]]
+            q = self.ordered[min(self.getIndex(iters, group)
                                  for group in groups)]
             if q is None:
                 raise StopIteration(groups)
