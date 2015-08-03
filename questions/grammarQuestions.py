@@ -53,7 +53,7 @@ class NegativeNoun(TranslationQuestion):
         Xじゃない is the more casual form.""")
     def __init__(self, get):
         self.obj = get('noun')
-        self.rep = "is not %s" % self.obj.rep
+        self.rep = "not %s" % self.obj.rep
         self.parts = [self.obj,
                       Literal([u'でわ', u'じゃ'], self),
                       Literal([u'ない'], self)]
@@ -66,12 +66,23 @@ class PastNoun(TranslationQuestion):
         self.rep = "was %s" % self.obj.rep
         self.parts = [self.obj, Literal([u'だった'], self)]
 
+class NegPastNoun(TranslationQuestion):
+    q = "NegPastNoun"
+    body = u"Form 'was not X' with 'Xでわなかった' or 'Xじゃなかった'."
+    def __init__(self, get):
+        self.obj = get('negnoun')
+        self.rep = "was %s" % self.obj.rep
+        assert self.obj.parts[-1].values == [u'ない',]
+        self.parts = self.obj.parts[:-1] + [Literal([u'なかった',], self)]
+
 grammar = [
     (Declarative, 'undec'),
-    (NegativeNoun, 'neg'),
+    (NegativeNoun, 'negnoun'),
     (PastNoun, 'undec'),
+    (NegPastNoun, 'undec'),
 ]
-global_categories = {}
+global_categories = {
+}
 
 def expand(categories, cat):
     if cat in categories:
