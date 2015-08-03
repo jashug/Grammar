@@ -5,9 +5,12 @@ class Pack(object):
         self.scheduler = scheduler
         self.persist = persist
 
-    def getQuestion(self, time):
+    def getQuestion(self, time, use_immature=False):
         try:
-            return self.triage.recommend(time).next()[1]
+            q, immature = self.triage.recommend(time).next()[1]
+            if immature and not use_immature:
+                raise StopIteration()
+            return q
         except StopIteration:
             return self.feed.getQuestion()
 
@@ -35,16 +38,19 @@ class CategoryPack(Pack):
         feed = self.feed.getQuestion()
         feed.next()
         
-        category = yield
+        category, use_immature = yield
         while True:
             groups = self.feed.getGroups(category)
             try:
-                category = yield triage.send(groups)
+                out, immature = triage.send(groups)
+                if immature and not use_immature:
+                    raise StopIteration()
             except StopIteration:
                 try:
-                    category = yield feed.send(groups)
+                    out = feed.send(groups)
                 except StopIteration:
                     raise StopIteration(category)
+            category, use_immature = yield out
 
     def record(self, q, correct, time, persist=True):
         self.feed.mark(q)

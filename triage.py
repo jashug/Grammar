@@ -1,4 +1,5 @@
 from collections import defaultdict
+from itertools import chain
 from heap import Heap
 
 class Expire(object):
@@ -17,7 +18,9 @@ class Expire(object):
 
     def recommend(self, time):
         self.shift(time)
-        return self.triage.recommend(time)
+        out = self.triage.recommend(time)
+        return chain(self.triage.recommend(time),
+                     ((t, (q, True)) for t, q in self.queue))
 
     def remove(self, q):
         if q in self.queue:
@@ -37,7 +40,7 @@ class Reverse(object):
 
     def recommend(self, time):
         for t, q in self.queue:
-            yield t, q
+            yield t, (q, False)
 
     def remove(self, q):
         if q in self.queue:

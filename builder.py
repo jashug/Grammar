@@ -19,8 +19,8 @@ def askQuestion(pack, context, time):
 def askQuestionCategories(pack, context, time):
     gen = pack.getQuestion(time)
     gen.next()
-    def get(category):
-        q = gen.send(category)
+    def get(category, use_immature=True):
+        q = gen.send((category, use_immature))
         question = context[q](get)
         if q not in pack.feed.seen:
             print "New Question:"
@@ -28,7 +28,7 @@ def askQuestionCategories(pack, context, time):
         return question
     def put(q, correct):
         pack.record(q, correct, time)
-    question = get('*')
+    question = get('*', False)
     print question.prompt
     ans = raw_input()
     correct, blame = question.check(put, ans)
