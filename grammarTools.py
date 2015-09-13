@@ -6,9 +6,9 @@ from pprint import pprint
 from collections import defaultdict
 import itertools, functools
 
-from .questions.grammarQuestions import *
-from . import questions.japQuestions as jap
-from . import questions.vocabQuestions as voc
+from questions.grammarQuestions import *
+from questions import japQuestions as jap
+from questions import vocabQuestions as voc
 
 entities = """\
 <!ENTITY MA "martial arts term">
@@ -231,7 +231,7 @@ rposs, rpossets = computePos(inter[:10000])
 def posCategories(possets):
     categories = defaultdict(list)
     def name(pset):
-        return 'C'+'.'.join(sorted(pset))
+        return ''+'.'.join(sorted(pset))
     def value(pset):
         return 'G'+'.'.join(sorted(pset))
     for pset in possets:
@@ -241,26 +241,26 @@ def posCategories(possets):
     return dict(categories)
 
 categories = {
-    'noun': ['Cn', 'Cn-adv', 'Cn-suf', 'Cn-pref', 'Cn-t'],
-    'verb': ['Caux-v', 'Civ', 'Cv-unspec', 'Cv1', 'Cv1-s',
-             'Cv2a-s', 'Cv2b-k', 'Cv2b-s', 'Cv2d-k', 'Cv2d-s',
-             'Cv2g-k', 'Cv2g-s', 'Cv2h-k', 'Cv2h-s', 'Cv2k-k',
-             'Cv2k-s', 'Cv2m-k', 'Cv2m-s', 'Cv2n-s', 'Cv2r-k',
-             'Cv2r-s', 'Cv2s-s', 'Cv2t-k', 'Cv2t-s', 'Cv2w-s',
-             'Cv2y-k', 'Cv2y-s', 'Cv2z-s', 'Cv4b', 'Cv4g', 'Cv4h', 'Cv4k',
-             'Cv4m', 'Cv4n', 'Cv4r', 'Cv4s', 'Cv4t', 'Cv5aru', 'Cv5b',
-             'Cv5g', 'Cv5k', 'Cv5k-s', 'Cv5m', 'Cv5n', 'Cv5r', 'Cv5r-i',
-             'Cv5s', 'Cv5t', 'Cv5u', 'Cv5u-s', 'Cv5uru', 'Cvi', 'Cvk',
-             'Cvn', 'Cvr', 'Cvs', 'Cvs-c', 'Cvs-i', 'Cvs-s', 'Cvt', 'Cvz'],
+    'noun': ['n', 'n-adv', 'n-suf', 'n-pref', 'n-t'],
+    'verb': ['aux-v', 'iv', 'v-unspec', 'v1', 'v1-s',
+             'v2a-s', 'v2b-k', 'v2b-s', 'v2d-k', 'v2d-s',
+             'v2g-k', 'v2g-s', 'v2h-k', 'v2h-s', 'v2k-k',
+             'v2k-s', 'v2m-k', 'v2m-s', 'v2n-s', 'v2r-k',
+             'v2r-s', 'v2s-s', 'v2t-k', 'v2t-s', 'v2w-s',
+             'v2y-k', 'v2y-s', 'v2z-s', 'v4b', 'v4g', 'v4h', 'v4k',
+             'v4m', 'v4n', 'v4r', 'v4s', 'v4t', 'v5aru', 'v5b',
+             'v5g', 'v5k', 'v5k-s', 'v5m', 'v5n', 'v5r', 'v5r-i',
+             'v5s', 'v5t', 'v5u', 'v5u-s', 'v5uru', 'vi', 'vk',
+             'vn', 'vr', 'vs', 'vs-c', 'vs-i', 'vs-s', 'vt', 'vz'],
 }
-categories.update(posCategories(possets))
+#categories.update(posCategories(possets))
 
 revMap = defaultdict(lambda :defaultdict(set))
 for i in range(len(inter)):
     q = inter[i]
     for entry in qs[q].entries:
         for sense in entry[1]:
-            pos = 'G'+'.'.join(sorted(entities[pos] for pos in sense[-1]))
+            pos = frozenset(entities[pos] for pos in sense[-1])
             for gloss in sense[0]:
                 gloss = voc.elimParens(gloss).lower().strip()
                 revMap[gloss][pos].add((entry[0][0], i))
@@ -297,10 +297,9 @@ def add(word):
     dic_word = revMap[word]
     if len(dic_word) > 1:
         print("Multiple POS")
-        pos = 'G' + '.'.join(sorted(
-            input("Choose POS (ex: n.vs): ").split('.')))
+        pos = frozenset(input("Choose POS (ex: n.vs): ").split('.'))
     else:
-        pos = list(dic_word.keys())[0]
+        pos = frozenset(list(dic_word.keys())[0])
         print("POS:", pos)
     posset = set(pos[1:].split('.'))
     values = set()

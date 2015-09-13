@@ -1,10 +1,9 @@
 import time
 import pickle as pickle
 
-from . import builder
+from question_basics import recursive_children
 
 cacheFile = "records/pack.pkl"
-contextFile = "records/context.pkl"
 
 pack, context = None, None
 
@@ -13,9 +12,6 @@ def load():
     if pack is None:
         with open(cacheFile, 'rb') as f:
             pack = pickle.load(f)
-    if context is None:
-        with open(contextFile, 'rb') as f:
-            context = pickle.load(f)
 
 def save():
     with open(cacheFile, 'wb') as f:
@@ -26,23 +22,40 @@ def main():
 
     print("Welcome to the Quiz program (2.0)")
     pack.stats(time.time())
-    sentry = input("Press enter to begin (non-empty to stop): ")
-    if sentry: return
+    input("Press enter to begin.")
 
     start = time.time()
     total, wrong = 0, 0
 
     with pack:
-        while not sentry:
-            try:
-                correct = askQuestion(pack, context, time.time())
-            except StopIteration as e:
-                print("Out of cards in:", e.message)
-                break
+        try:
+            while True:
+                try:
+                    current_time = time.time()
+                    question = pack.get_question(current_time)
+                    for child in recursive_children(question):
+                        if child.q not in pack.feed.seen:
+                            print("New Question:")
+                            print(child.body)
+                    print(question.prompt)
+                    ans = input()
+                    correct = question.check(ans)
+                    if correct:
+                        print("Correct!")
+                    else:
+                        print("Incorrect.")
+                        if not pack.second_chance(question):
+                            print("Remember:")
+                            print(question.body)
+                    pack.record(question, correct, current_time)
+                except StopIteration as e:
+                    print("Out of cards in:", e.value)
+                    break
 
-            if not correct: wrong += 1
-            total += 1
-            sentry = input("Continue? (non-empty to stop): ")
+                if not correct: wrong += 1
+                total += 1
+        except KeyboardInterrupt:
+            print("Finished.")
 
     end = time.time()
     dt = end - start
@@ -60,51 +73,29 @@ def main():
 
     save()
 
-def packSimple():
-    from .questions.japQuestions import addJapaneseQuestions
-    from .feed import Feed
-    from .scheduler import Jas1Scheduler
-    from .triage import ReverseTriage
-    from .pack import Pack
-    from .persist import Persist, replay
+def setup():
+    from questions.grammarQuestions import addQuestions
+    from feed import CategoryFeed
+    from scheduler import Jas1Scheduler
+    from triage import CategoryReverseTriage
+    from pack import CategoryPack
+    from persist import Persist, replay
     qs = {}
-    ordered, kanji, vocab, chunks = \
-             addJapaneseQuestions(qs, "questions/vocabPickle.pkl")
-    print("Got questions")
-    feed = Feed(ordered)
-    pack = Pack(feed, ReverseTriage(),
-                Jas1Scheduler(), Persist("records/records.txt"))
-    replay("records/records.txt", pack)
-    with open(contextFile, 'wb') as f:
-        pickle.dump(qs, f, -1)
-    with open(cacheFile, 'wb') as f:
-        pickle.dump(pack, f, -1)
-
-def packCategories():
-    from .questions.grammarQuestions import addQuestions
-    from .feed import CategoryFeed
-    from .scheduler import Jas1Scheduler
-    from .triage import CategoryReverseTriage
-    from .pack import CategoryPack
-    from .persist import Persist, replay
-    qs = {}
-    ordered, categories = addQuestions(qs, "questions/grammarPickle.pkl")
-    feed = CategoryFeed(ordered, categories)
+    ordered = addQuestions(qs, "questions/grammarPickle.pkl")
+    feed = CategoryFeed(ordered)
     pack = CategoryPack(feed, CategoryReverseTriage(),
-                        Jas1Scheduler(), Persist("records/records.txt"))
+                        Jas1Scheduler(), qs, Persist("records/records.txt"))
     replay("records/records.txt", pack, qs)
-    with open(contextFile, 'wb') as f:
-        pickle.dump(qs, f, -1)
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
 
 def packCategoriesTest():
-    from .questions.testCategoryQuestions import addQuestions
-    from .feed import CategoryFeed
-    from .scheduler import Jas1Scheduler
-    from .triage import CategoryReverseTriage
-    from .pack import CategoryPack
-    from .persist import Persist, replay
+    from questions.testCategoryQuestions import addQuestions
+    from feed import CategoryFeed
+    from scheduler import Jas1Scheduler
+    from triage import CategoryReverseTriage
+    from pack import CategoryPack
+    from persist import Persist, replay
     qs = {}
     ordered, categories = addQuestions(qs)
     feed = CategoryFeed(ordered, categories)
@@ -116,5 +107,5 @@ def packCategoriesTest():
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
 
-setup = packCategories
-askQuestion = builder.askQuestionCategories
+setup()
+main()

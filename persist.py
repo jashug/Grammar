@@ -1,3 +1,5 @@
+from question_basics import stringify, destringify
+
 class Persist(object):
     def __init__(self, backingFileName):
         self.path = backingFileName
@@ -13,14 +15,15 @@ class Persist(object):
 
     def record(self, q, correct, time):
         self.outFile.write("%(tag)s %(time).3f %(grade)s\n" % {
-            'tag': q, 'time':time, 'grade':'1' if correct else '0'})
+            'tag': stringify(q), 'time':time,
+            'grade':'1' if correct else '0',
+            })
 
 def replay(backingFile, pack, qs):
     with open(backingFile, 'r') as f:
         for line in f:
             assert line[-1] == '\n'
             q, time, correct = line[:-1].split()
-            q, time, correct = q, float(time), correct == '1'
-            if q in qs:
-                pack.record(q, correct, time, False)
+            q, time, correct = destringify(q, qs), float(time), correct == '1'
+            pack.record(q, correct, time, False)
     return pack

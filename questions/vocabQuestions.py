@@ -5,7 +5,15 @@ import pickle as pickle
 
 def uid(s):
     """Generate a unique ASCII string for a unicode string."""
-    return base64.urlsafe_b64encode(s.encode("UTF-8"))
+    return base64.urlsafe_b64encode(s.encode("UTF-8")).decode('ascii')
+
+def uidInv(s):
+    """uidInv(uid(s)) == s"""
+    try:
+        return base64.urlsafe_b64decode(s.encode('ascii')).decode('utf-8')
+    except:
+        print(repr(s))
+        raise
 
 def regSpace(s):
     out = [[]]

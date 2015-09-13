@@ -1,57 +1,76 @@
 # coding=utf-8
 
-import pickle as pickle
+import pickle
 import base64
+import copy
+from collections import defaultdict
 from textwrap import dedent
-from builder import CategoryQuestion, Literal, QuestionThunk
-
-def uid(s):
-    """Generate a unique ASCII string for a unicode string."""
-    return base64.urlsafe_b64encode(s.encode("UTF-8"))
+from question_basics import CategoryQuestion, Literal, uid
 
 class TranslationQuestion(CategoryQuestion):
     @property
     def prompt(self):
         return "Translate: %s" % self.rep
 
-class Word(TranslationQuestion):
-    q = staticmethod(lambda word, values:'Word.'+uid(word))
-    def __init__(self, get, word, values):
+class WordQuestion(TranslationQuestion):
+    def __init__(self, word, values, group):
+        self.q = 'Word.'+uid(word)
+        self.group = group
         self.values = values
         self.rep = word
-        self.parts = [Literal(values, self)]
+        self.parts = [Literal(values)]
         self.body = ("The word '%s' can be translated as:\n" % word +
                      '\n'.join(values))
-WordQuestion = lambda word, values:QuestionThunk(Word, word, values)
 
-class Conjugatable(TranslationQuestion):
-    q = staticmethod(lambda word, values, suffix:'Conj.'+uid(word))
-    def __init__(self, get, word, values, suffix):
+    def child_categories(self, category):
+        return ()
+
+    def __call__(self):
+        self = copy.deepcopy(self)
+        super(WordQuestion, self).__init__()
+        return self
+
+class ConjugatableQuestion(TranslationQuestion):
+    def __init__(self, word, values, suffix):
+        self.q = 'Conj.'+uid(word)
         self.values = values
         self.suffix = suffix
         self.rep = word
         assert all(val.endswith(suffix) for val in values)
         stems = [val[:-len(suffix)] for val in values]
-        self.parts = [Literal(stems, self), Literal([suffix], self)]
+        self.parts = [Literal(stems), Literal([suffix])]
         self.body = ("The word '%s' can be translated as:\n" % word +
                      '\n'.join(values))
-ConjugatableQuestion = (lambda word, values, suffix:
-                        QuestionThunk(Conjugatable, word, values, suffix))
+
+    def child_categories(self, category):
+        return ()
+
+    def __call__(self):
+        self = copy.deepcopy(self)
+        super(ConjugatableQuestion, self).__init__()
+        return self
 
 class Declarative(TranslationQuestion):
     q = "DeclareDa"
     body = "Declare 'is X' with 'Xだ'."
-    def __init__(self, get):
-        self.obj = get('noun')
-        self.rep = "is %s" % self.obj.rep
-        self.parts = [self.obj, Literal(['だ'], self)]
+    group = frozenset(('undec',))
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.rep = "is %s" % obj.rep
+        self.parts = [obj, Literal(['だ'])]
+
+    @staticmethod
+    def child_categories(category):
+        return ('noun',)
 
 class NegativeNoun(TranslationQuestion):
     q = "NegNoun"
     body = dedent("""\
         Form 'is not X' with 'Xでわない' or 'Xじゃない'.
         Xじゃない is the more casual form.""")
-    def __init__(self, get):
+    group = frozenset(('undec',))
+    def __init__(self):
+        super().__init__()
         self.obj = get('noun')
         self.rep = "not %s" % self.obj.rep
         self.parts = [self.obj,
@@ -61,7 +80,9 @@ class NegativeNoun(TranslationQuestion):
 class PastNoun(TranslationQuestion):
     q = "PastNoun"
     body = "Form 'was X' with 'Xだった'."
-    def __init__(self, get):
+    group = frozenset(('undec',))
+    def __init__(self):
+        super().__init__()
         self.obj = get('noun')
         self.rep = "was %s" % self.obj.rep
         self.parts = [self.obj, Literal(['だった'], self)]
@@ -69,7 +90,9 @@ class PastNoun(TranslationQuestion):
 class NegPastNoun(TranslationQuestion):
     q = "NegPastNoun"
     body = "Form 'was not X' with 'Xでわなかった' or 'Xじゃなかった'."
-    def __init__(self, get):
+    group = frozenset(('undec',))
+    def __init__(self):
+        super().__init__()
         self.obj = get('negnoun')
         self.rep = "was %s" % self.obj.rep
         assert self.obj.parts[-1].values == ['ない',]
@@ -93,7 +116,7 @@ def expand(categories, cat):
         return new
     else:
         return set([cat])
-    
+
 suffixes = {
 }
 
@@ -108,11 +131,19 @@ def addQuestions(qs, dictCache=None):
         categories[cat] = baseCategories[cat]
     for cat in categories:
         expand(categories, cat)
+    rev_categories = defaultdict(set)
+    for cat in categories:
+        for group in categories[cat]:
+            rev_categories[group].add(cat)
 
     dictionary_list = []
     rank_dict = {}
     for word in dictionary:
         values, group, rank = dictionary[word]
+        group = set(group)
+        for key in list(group):
+            group.update(rev_categories[key])
+        group = frozenset(group)
         dictionary_list.append((word, values, group))
         rank_dict[word] = rank
     dictionary_list.sort(key=lambda word_values_group: rank_dict[word_values_group[0]])
@@ -121,6 +152,7 @@ def addQuestions(qs, dictCache=None):
     rank_dict = {}
     def add(group, rank, question):
         q = question.q
+        group = question.group
         assert q not in qs
         ordered.append((q, group))
         rank_dict[q] = rank
@@ -128,13 +160,13 @@ def addQuestions(qs, dictCache=None):
     for i in range(len(dictionary_list)):
         word, values, group = dictionary_list[i]
         if group in suffixes:
-            question = ConjugatableQuestion(word, values, suffixes[group])
+            question = ConjugatableQuestion(word, values, group)
         else:
-            question = WordQuestion(word, values)
+            question = WordQuestion(word, values, group)
         add(group, (i, 0), question)
     for i in range(len(grammar)):
         question, group = grammar[i]
         add(group, (1 * i, 1), question)
     
     ordered.sort(key=lambda q_group:rank_dict[q_group[0]])
-    return ordered, categories
+    return ordered

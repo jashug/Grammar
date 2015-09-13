@@ -1,6 +1,6 @@
 from collections import defaultdict
 from itertools import chain
-from .heap import Heap
+from heap import Heap
 
 class Expire(object):
     def __init__(self, triage):
@@ -60,7 +60,7 @@ class Category(object):
         self.groups[group].schedule(q, time)
 
     def recommend(self, time):
-        inf = (float('inf'), None)
+        inf = (float('inf'), (None, True))
         def attempt(it):
             try:
                 return next(it)
@@ -70,13 +70,15 @@ class Category(object):
         for group in self.groups:
             iters[group] = self.groups[group].recommend(time)
             saved[group] = attempt(iters[group])
-        groups = yield
+        groups, use_immature = yield
         while True:
-            (t, q), group = min((saved[group], group) for group in groups)
-            if t == float('inf'):
-                raise StopIteration()
-            saved[group] = attempt(iters[group])
-            groups = yield q
+            (t, (q, immature)), group = min((saved[group], group)
+                                            for group in groups)
+            if t == float('inf') or immature and not use_immature:
+                q = StopIteration
+            else:
+                saved[group] = attempt(iters[group])
+            groups, use_immature = yield q
 
     def stats(self, time):
         pass
