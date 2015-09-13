@@ -1,5 +1,4 @@
 from collections import defaultdict
-from question_basics import ALL
 
 class Feed(object):
     def __init__(self, ordered):
@@ -22,7 +21,6 @@ class Feed(object):
 class CategoryFeed(object):
     def __init__(self, ordered):
         assert ordered
-        self.categories = defaultdict(set)
         self.ordered = []
         self.mapping = {}
         self.indexes = defaultdict(list)
@@ -32,9 +30,6 @@ class CategoryFeed(object):
             self.ordered.append(q)
             self.mapping[q] = group
             self.indexes[group].append(i)
-            for category in group:
-                self.categories[category].add(group)
-            self.categories[ALL].add(group)
         for group in self.indexes:
             self.indexes[group].append(len(self.ordered))
             self.iters[group] = 0
@@ -70,13 +65,11 @@ class CategoryFeed(object):
             groups = yield q
 
     def getGroups(self, category):
-        if category == ALL:
-            return self.indexes.keys()
-        else:
-            out = [group for group in self.indexes if category in group]
-            if not out:
-                raise Exception("No groups match category.", category)
-            return out
+        out = [group for group in self.indexes
+               if category(group)]
+        if not out:
+            raise Exception("No groups match category.", category)
+        return out
 
     def find(self, q):
         return self.mapping[q]

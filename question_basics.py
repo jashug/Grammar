@@ -38,7 +38,89 @@ def destringify(q, context):
     question = parse(q)
     return question
 
-ALL = '*'
+class Filter(object):
+    def __and__(self, other):
+        return AndFilter(self, other)
+
+    def __or__(self, other):
+        return OrFilter(self, other)
+
+    def __invert__(self):
+        return NotFilter(self)
+
+    def without(self, tag):
+        return WithoutFilter(self, tag)
+
+class AnyFilter(Filter):
+    def __call__(self, group):
+        return True
+
+    def __str__(self):
+        return 'ANY'
+
+class NoneFilter(Filter):
+    def __call__(self, group):
+        return False
+
+    def __str__(self):
+        return 'NONE'
+
+class AndFilter(Filter):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __call__(self, group):
+        return self.left(group) and self.right(group)
+
+    def __str__(self):
+        return '(%s & %s)' % (self.left, self.right)
+
+class OrFilter(Filter):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def __call__(self, group):
+        return self.left(group) or self.right(group)
+
+    def __str__(self):
+        return '(%s | %s)' % (self.left, self.right)
+
+class NotFilter(Filter):
+    def __init__(self, child):
+        self.child = child
+
+    def __call__(self, group):
+        return not self.child(group)
+
+    def __str__(self):
+        return '(~%s)' % self.child
+
+class WithoutFilter(Filter):
+    def __init__(self, child, tag):
+        self.child = child
+        self.tag = tag
+
+    def __call__(self, group):
+        return (self.tag not in group and
+                self.child(frozenset(list(group) + [self.tag,])))
+
+    def __str__(self):
+        return "(%s.without('%s'))" % (self.child, self.tag)
+
+class Tag(Filter):
+    def __init__(self, tag):
+        self.tag = tag
+
+    def __call__(self, group):
+        return self.tag in group
+
+    def __str__(self):
+        return "Tag('%s')" % self.tag
+
+ANY = AnyFilter()
+NONE = NoneFilter()
 
 class CategoryQuestion(object):
     def __init__(self, *children):

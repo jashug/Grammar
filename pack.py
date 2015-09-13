@@ -1,4 +1,4 @@
-from question_basics import stringify, recursive_children, ALL
+from question_basics import stringify, recursive_children, ANY
 
 class CategoryPack(object):
     def __init__(self, feed, triage, scheduler, context, persist):
@@ -36,7 +36,7 @@ class CategoryPack(object):
             question = question_factory(*[get_full_question(sub_category)
                                           for sub_category in sub_categories])
             return question
-        return get_full_question(ALL, False)
+        return get_full_question(ANY, False)
 
     def get_question(self, time):
         if self.stack:

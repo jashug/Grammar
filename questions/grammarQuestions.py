@@ -5,7 +5,7 @@ import base64
 import copy
 from collections import defaultdict
 from textwrap import dedent
-from question_basics import CategoryQuestion, Literal, uid
+from question_basics import CategoryQuestion, Literal, uid, Tag, NONE
 
 class TranslationQuestion(CategoryQuestion):
     @property
@@ -61,51 +61,66 @@ class Declarative(TranslationQuestion):
 
     @staticmethod
     def child_categories(category):
-        return ('noun',)
+        return (global_filters['noun'],)
 
 class NegativeNoun(TranslationQuestion):
     q = "NegNoun"
     body = dedent("""\
         Form 'is not X' with 'Xでわない' or 'Xじゃない'.
         Xじゃない is the more casual form.""")
-    group = frozenset(('undec',))
-    def __init__(self):
-        super().__init__()
-        self.obj = get('noun')
-        self.rep = "not %s" % self.obj.rep
-        self.parts = [self.obj,
-                      Literal(['でわ', 'じゃ'], self),
-                      Literal(['ない'], self)]
+    group = frozenset(('neg', 'noun'))
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.rep = "not %s" % obj.rep
+        self.parts = [obj,
+                      Literal(['でわ', 'じゃ']),
+                      Literal(['ない'])]
+
+    @staticmethod
+    def child_categories(category):
+        return (global_filters['noun'],)
 
 class PastNoun(TranslationQuestion):
     q = "PastNoun"
     body = "Form 'was X' with 'Xだった'."
     group = frozenset(('undec',))
-    def __init__(self):
-        super().__init__()
-        self.obj = get('noun')
-        self.rep = "was %s" % self.obj.rep
-        self.parts = [self.obj, Literal(['だった'], self)]
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.rep = "was %s" % obj.rep
+        self.parts = [obj, Literal(['だった'])]
 
-class NegPastNoun(TranslationQuestion):
-    q = "NegPastNoun"
-    body = "Form 'was not X' with 'Xでわなかった' or 'Xじゃなかった'."
-    group = frozenset(('undec',))
-    def __init__(self):
-        super().__init__()
-        self.obj = get('negnoun')
-        self.rep = "was %s" % self.obj.rep
-        assert self.obj.parts[-1].values == ['ない',]
-        self.parts = self.obj.parts[:-1] + [Literal(['なかった',], self)]
+    @staticmethod
+    def child_categories(category):
+        return (global_filters['noun'],)
+
+class NegPast(TranslationQuestion):
+    q = "NegPast"
+    body = dedent("""\
+        The negative form of just about everything ends in 'ない'.
+        Form 'not X (past)' from 'not X' by replacing
+        'ない' with 'なかった'.""")
+    group = frozenset(('negpast'))
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.rep = "%s (past)" % obj.rep
+        if obj.parts[-1].values != ['ない',]:
+            print(obj, obj.parts, obj.parts[-1].values)
+        assert obj.parts[-1].values == ['ない',]
+        self.parts = obj.parts[:-1] + [Literal(['なかった',])]
+
+    @staticmethod
+    def child_categories(category):
+        return (category.without('negpast') & Tag('neg'),)
 
 grammar = [
-    (Declarative, 'undec'),
-    (NegativeNoun, 'negnoun'),
-    (PastNoun, 'undec'),
-    (NegPastNoun, 'undec'),
+    Declarative,
+    NegativeNoun,
+    PastNoun,
+    NegPast,
 ]
 global_categories = {
 }
+global_filters = {}
 
 def expand(categories, cat):
     if cat in categories:
@@ -131,26 +146,22 @@ def addQuestions(qs, dictCache=None):
         categories[cat] = baseCategories[cat]
     for cat in categories:
         expand(categories, cat)
-    rev_categories = defaultdict(set)
     for cat in categories:
-        for group in categories[cat]:
-            rev_categories[group].add(cat)
+        global_filters[cat] = NONE
+        for tag in categories[cat]:
+            global_filters[cat] = global_filters[cat] | Tag(tag)
 
     dictionary_list = []
     rank_dict = {}
     for word in dictionary:
         values, group, rank = dictionary[word]
-        group = set(group)
-        for key in list(group):
-            group.update(rev_categories[key])
-        group = frozenset(group)
         dictionary_list.append((word, values, group))
         rank_dict[word] = rank
     dictionary_list.sort(key=lambda word_values_group: rank_dict[word_values_group[0]])
 
     ordered = []
     rank_dict = {}
-    def add(group, rank, question):
+    def add(rank, question):
         q = question.q
         group = question.group
         assert q not in qs
@@ -163,10 +174,10 @@ def addQuestions(qs, dictCache=None):
             question = ConjugatableQuestion(word, values, group)
         else:
             question = WordQuestion(word, values, group)
-        add(group, (i, 0), question)
+        add((i, 0), question)
     for i in range(len(grammar)):
-        question, group = grammar[i]
-        add(group, (1 * i, 1), question)
+        question = grammar[i]
+        add((1 * i, 1), question)
     
     ordered.sort(key=lambda q_group:rank_dict[q_group[0]])
     return ordered
