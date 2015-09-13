@@ -1,9 +1,9 @@
 from collections import defaultdict
 
-import kanjiQuestions, vocabQuestions
-from vocabQuestions import VocabRtoSQuestion
-from vocabQuestions import VocabKtoSQuestion, VocabKtoRQuestion
-from vocabQuestions import VocabKRtoSQuestion, VocabKStoRQuestion
+from . import kanjiQuestions, vocabQuestions
+from .vocabQuestions import VocabRtoSQuestion
+from .vocabQuestions import VocabKtoSQuestion, VocabKtoRQuestion
+from .vocabQuestions import VocabKRtoSQuestion, VocabKStoRQuestion
 
 def getPriNF(q):
     if isinstance(q, VocabRtoSQuestion):

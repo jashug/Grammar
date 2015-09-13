@@ -1,6 +1,6 @@
 # coding=utf-8
 
-import cPickle as pickle
+import pickle as pickle
 import base64
 from textwrap import dedent
 from builder import CategoryQuestion, Literal, QuestionThunk
@@ -40,40 +40,40 @@ ConjugatableQuestion = (lambda word, values, suffix:
 
 class Declarative(TranslationQuestion):
     q = "DeclareDa"
-    body = u"Declare 'is X' with 'Xだ'."
+    body = "Declare 'is X' with 'Xだ'."
     def __init__(self, get):
         self.obj = get('noun')
         self.rep = "is %s" % self.obj.rep
-        self.parts = [self.obj, Literal([u'だ'], self)]
+        self.parts = [self.obj, Literal(['だ'], self)]
 
 class NegativeNoun(TranslationQuestion):
     q = "NegNoun"
-    body = dedent(u"""\
+    body = dedent("""\
         Form 'is not X' with 'Xでわない' or 'Xじゃない'.
         Xじゃない is the more casual form.""")
     def __init__(self, get):
         self.obj = get('noun')
         self.rep = "not %s" % self.obj.rep
         self.parts = [self.obj,
-                      Literal([u'でわ', u'じゃ'], self),
-                      Literal([u'ない'], self)]
+                      Literal(['でわ', 'じゃ'], self),
+                      Literal(['ない'], self)]
 
 class PastNoun(TranslationQuestion):
     q = "PastNoun"
-    body = u"Form 'was X' with 'Xだった'."
+    body = "Form 'was X' with 'Xだった'."
     def __init__(self, get):
         self.obj = get('noun')
         self.rep = "was %s" % self.obj.rep
-        self.parts = [self.obj, Literal([u'だった'], self)]
+        self.parts = [self.obj, Literal(['だった'], self)]
 
 class NegPastNoun(TranslationQuestion):
     q = "NegPastNoun"
-    body = u"Form 'was not X' with 'Xでわなかった' or 'Xじゃなかった'."
+    body = "Form 'was not X' with 'Xでわなかった' or 'Xじゃなかった'."
     def __init__(self, get):
         self.obj = get('negnoun')
         self.rep = "was %s" % self.obj.rep
-        assert self.obj.parts[-1].values == [u'ない',]
-        self.parts = self.obj.parts[:-1] + [Literal([u'なかった',], self)]
+        assert self.obj.parts[-1].values == ['ない',]
+        self.parts = self.obj.parts[:-1] + [Literal(['なかった',], self)]
 
 grammar = [
     (Declarative, 'undec'),
@@ -115,7 +115,7 @@ def addQuestions(qs, dictCache=None):
         values, group, rank = dictionary[word]
         dictionary_list.append((word, values, group))
         rank_dict[word] = rank
-    dictionary_list.sort(key=lambda (word, values, group): rank_dict[word])
+    dictionary_list.sort(key=lambda word_values_group: rank_dict[word_values_group[0]])
 
     ordered = []
     rank_dict = {}
@@ -136,5 +136,5 @@ def addQuestions(qs, dictCache=None):
         question, group = grammar[i]
         add(group, (1 * i, 1), question)
     
-    ordered.sort(key=lambda (q, group):rank_dict[q])
+    ordered.sort(key=lambda q_group:rank_dict[q_group[0]])
     return ordered, categories

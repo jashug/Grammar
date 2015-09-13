@@ -98,7 +98,7 @@ class Heap(object):
                 secondary.put(right, self.heap[right][0])            
 
 if __name__ == "__main__":
-    print "Testing..."
+    print("Testing...")
     h = Heap()
     for i in range(10):
         h.put(chr(97+i), i)
@@ -126,4 +126,4 @@ if __name__ == "__main__":
     h.put('one', 151.2)
     #print "After Put:", h.heap, h.map
     assert h.pop()[1] == 'person'
-    print "Good!"
+    print("Good!")

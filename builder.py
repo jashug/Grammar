@@ -2,42 +2,42 @@ def askQuestion(pack, context, time):
     q = pack.getQuestion(time)
     question = context[q]
     if q not in pack.feed.seen:
-        print "New Question:"
+        print("New Question:")
         question.body()
     question.ask()
-    ans = raw_input()
+    ans = input()
     correct = question.check(ans)
     if correct:
-        print "Correct"
+        print("Correct")
     else:
-        print "Incorrect"
-        print "Remember:"
+        print("Incorrect")
+        print("Remember:")
         question.body()
     pack.record(q, correct, time)
     return correct
 
 def askQuestionCategories(pack, context, time):
     gen = pack.getQuestion(time)
-    gen.next()
+    next(gen)
     def get(category, use_immature=True):
         q = gen.send((category, use_immature))
         question = context[q](get)
         if q not in pack.feed.seen:
-            print "New Question:"
-            print question.body
+            print("New Question:")
+            print(question.body)
         return question
     def put(q, correct):
         pack.record(q, correct, time)
     question = get('*', False)
-    print question.prompt
-    ans = raw_input()
+    print(question.prompt)
+    ans = input()
     correct, blame = question.check(put, ans)
     if correct:
-        print "Correct!"
+        print("Correct!")
     else:
-        print "Incorrect."
-        print "Remember:"
-        print blame.body
+        print("Incorrect.")
+        print("Remember:")
+        print(blame.body)
     return correct
 
 class QuestionThunk(object):

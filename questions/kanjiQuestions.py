@@ -40,20 +40,20 @@ class KanjiToEnglishQuestion(object):
         self.strokes = int(misc.find("stroke_count").text)
 
     def ask(self):
-        print u"(Kanji) What does %s mean?"%self.literal
+        print("(Kanji) What does %s mean?"%self.literal)
 
     def check(self, answer):
         return answer.lower().strip() in self.answers
 
     def body(self):
-        print "(Kanji) %s"%self.literal
-        print (u"JLPT: %(jlpt)d, Grade: %(grade)d, " +
-               u"Strokes: %(strokes)d, Freq: %(freq)d")%{
+        print("(Kanji) %s"%self.literal)
+        print(("JLPT: %(jlpt)d, Grade: %(grade)d, " +
+               "Strokes: %(strokes)d, Freq: %(freq)d")%{
             'jlpt':self.jlpt, 'grade':self.grade, 'freq':self.freq,
-            'strokes':self.strokes}
-        print "Meanings:"
+            'strokes':self.strokes})
+        print("Meanings:")
         for answer in self.answers:
-            print answer
+            print(answer)
 
     @staticmethod
     def defaultIntHelper(misc, tag, default):

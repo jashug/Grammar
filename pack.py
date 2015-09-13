@@ -1,8 +1,9 @@
 class Pack(object):
-    def __init__(self, feed, triage, scheduler, persist):
+    def __init__(self, feed, triage, scheduler, context, persist):
         self.feed = feed
         self.triage = triage
         self.scheduler = scheduler
+        self.context = context
         self.persist = persist
 
     def getQuestion(self, time, use_immature=False):
@@ -34,9 +35,9 @@ class Pack(object):
 class CategoryPack(Pack):
     def getQuestion(self, time):
         triage = self.triage.recommend(time)
-        triage.next()
+        next(triage)
         feed = self.feed.getQuestion()
-        feed.next()
+        next(feed)
         
         category, use_immature = yield
         while True:

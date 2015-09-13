@@ -15,8 +15,8 @@ class Feed(object):
         return self.ordered[self.orderedI]
 
     def stats(self):
-        print "You have learned %d/%d cards" % \
-              (len(self.seen), len(self.ordered))
+        print("You have learned %d/%d cards" % \
+              (len(self.seen), len(self.ordered)))
 
 class CategoryFeed(object):
     def __init__(self, ordered, categories):

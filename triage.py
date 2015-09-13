@@ -1,6 +1,6 @@
 from collections import defaultdict
 from itertools import chain
-from heap import Heap
+from .heap import Heap
 
 class Expire(object):
     def __init__(self, triage):
@@ -47,7 +47,7 @@ class Reverse(object):
             self.queue.remove(q)
 
     def stats(self, time):
-        print "Review queue: %d" % len(self.queue)
+        print("Review queue: %d" % len(self.queue))
 
 def ReverseTriage():
     return Expire(Reverse())
@@ -63,7 +63,7 @@ class Category(object):
         inf = (float('inf'), None)
         def attempt(it):
             try:
-                return it.next()
+                return next(it)
             except StopIteration:
                 return inf
         iters, saved = {}, defaultdict(lambda :inf)

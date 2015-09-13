@@ -1,7 +1,7 @@
 import xml.etree.cElementTree as xml
 from collections import defaultdict
 import base64
-import cPickle as pickle
+import pickle as pickle
 
 def uid(s):
     """Generate a unique ASCII string for a unicode string."""
@@ -44,30 +44,30 @@ class VocabRtoSQuestion(object):
                 self.entries.append((sreb, [sense,]))
 
     def ask(self):
-        print "(VocabRtoS) What does %s mean?"%self.read
+        print("(VocabRtoS) What does %s mean?"%self.read)
 
     def check(self, answer):
         return answer.lower().strip() in self.answers
 
     def body(self):
-        print "(VocabRtoS) %s"%self.read
+        print("(VocabRtoS) %s"%self.read)
         for sreb, senses in self.entries:
-            print "Entry [" + ', '.join(sreb[2]) + ']:'
+            print("Entry [" + ', '.join(sreb[2]) + ']:')
             for info in sreb[1]:
-                print "Info: " + info
+                print("Info: " + info)
             for sense in senses:
-                print "Sense:"
+                print("Sense:")
                 for pos in sense[6]:
-                    print "Part of Speech: " + pos
+                    print("Part of Speech: " + pos)
                 for info in sense[1]:
-                    print "Info: " + info
+                    print("Info: " + info)
                 for misc in sense[2]:
-                    print "Misc: " + misc
+                    print("Misc: " + misc)
                 for field in sense[3]:
-                    print "Field: " + field
+                    print("Field: " + field)
                 for gloss in sense[0]:
-                    print "Gloss: " + gloss
-        print "Meanings: " + '; '.join(self.answers)
+                    print("Gloss: " + gloss)
+        print("Meanings: " + '; '.join(self.answers))
 
 class VocabKtoSQuestion(object):
     def __init__(self, kanji, tris):
@@ -87,30 +87,30 @@ class VocabKtoSQuestion(object):
                 self.entries.append((keb, [sense,]))
 
     def ask(self):
-        print "(VocabKtoS) What does %s mean?" % self.kanji
+        print("(VocabKtoS) What does %s mean?" % self.kanji)
 
     def check(self, answer):
         return answer.lower().strip() in self.answers
 
     def body(self):
-        print "(VocabKtoS) %s" % self.kanji
+        print("(VocabKtoS) %s" % self.kanji)
         for keb, senses in self.entries:
-            print "Entry [" + ', '.join(keb[2]) + ']:'
+            print("Entry [" + ', '.join(keb[2]) + ']:')
             for info in keb[1]:
-                print "Info: " + info
+                print("Info: " + info)
             for sense in senses:
-                print "Sense:"
+                print("Sense:")
                 for pos in sense[6]:
-                    print "Part of Speech: " + pos
+                    print("Part of Speech: " + pos)
                 for info in sense[1]:
-                    print "Info: " + info
+                    print("Info: " + info)
                 for misc in sense[2]:
-                    print "Misc: " + misc
+                    print("Misc: " + misc)
                 for field in sense[3]:
-                    print "Field: " + field
+                    print("Field: " + field)
                 for gloss in sense[0]:
-                    print "Gloss: " + gloss
-        print "Meanings: " + '; '.join(self.answers)
+                    print("Gloss: " + gloss)
+        print("Meanings: " + '; '.join(self.answers))
 
 class VocabKtoRQuestion(object):
     def __init__(self, kanji, tris):
@@ -127,22 +127,22 @@ class VocabKtoRQuestion(object):
                 self.entries.append((keb, [reb,]))
 
     def ask(self):
-        print "(VocabKtoR) How is %s read?" % self.kanji
+        print("(VocabKtoR) How is %s read?" % self.kanji)
 
     def check(self, answer):
         return answer in self.answers
 
     def body(self):
-        print "(VocabKtoR) %s" % self.kanji
+        print("(VocabKtoR) %s" % self.kanji)
         for keb, rebs in self.entries:
-            print "Entry [" + ', '.join(keb[2]) + ']:'
+            print("Entry [" + ', '.join(keb[2]) + ']:')
             for info in keb[1]:
-                print "Info: " + info
+                print("Info: " + info)
             for reb in rebs:
-                print "Reading: %s [%s]" % (reb[0], ', '.join(reb[2]))
+                print("Reading: %s [%s]" % (reb[0], ', '.join(reb[2])))
                 for info in reb[1]:
-                    print "Info: " + info
-        print "Readings: " + '; '.join(self.answers)
+                    print("Info: " + info)
+        print("Readings: " + '; '.join(self.answers))
 
 class VocabKRtoSQuestion(object):
     def __init__(self, kanji, read, tris):
@@ -163,35 +163,35 @@ class VocabKRtoSQuestion(object):
                 self.entries.append(((keb, reb), [sense,]))
 
     def ask(self):
-        print ("(VocabKRtoS) What does %s mean when read %s?" %
-               (self.kanji, self.read))
+        print(("(VocabKRtoS) What does %s mean when read %s?" %
+               (self.kanji, self.read)))
 
     def check(self, answer):
         return answer.lower().strip() in self.answers
 
     def body(self):
-        print "(VocabKRtoS) %s as %s" % (self.kanji, self.read)
+        print("(VocabKRtoS) %s as %s" % (self.kanji, self.read))
         for (keb, reb), senses in self.entries:
-            print "Entry:"
-            print "Keb [" + ', '.join(keb[2]) + ']:'
+            print("Entry:")
+            print("Keb [" + ', '.join(keb[2]) + ']:')
             for info in keb[1]:
-                print "Info: " + info
-            print "Reb [" + ', '.join(reb[2]) + ']:'
+                print("Info: " + info)
+            print("Reb [" + ', '.join(reb[2]) + ']:')
             for info in reb[1]:
-                print "Info: " + info
+                print("Info: " + info)
             for sense in senses:
-                print "Sense:"
+                print("Sense:")
                 for pos in sense[6]:
-                    print "Part of Speech: " + pos
+                    print("Part of Speech: " + pos)
                 for info in sense[1]:
-                    print "Info: " + info
+                    print("Info: " + info)
                 for misc in sense[2]:
-                    print "Misc: " + misc
+                    print("Misc: " + misc)
                 for field in sense[3]:
-                    print "Field: " + field
+                    print("Field: " + field)
                 for gloss in sense[0]:
-                    print "Gloss: " + gloss
-        print "Meanings: " + '; '.join(self.answers)
+                    print("Gloss: " + gloss)
+        print("Meanings: " + '; '.join(self.answers))
 
 class VocabKStoRQuestion(object):
     def __init__(self, kanji, sens, tris):
@@ -209,32 +209,32 @@ class VocabKStoRQuestion(object):
                 self.entries.append(((keb, sense), [reb,]))
 
     def ask(self):
-        print "(VocabKStoR) How is %s read in the sense of %s" % \
-              (self.kanji, self.sens)
+        print("(VocabKStoR) How is %s read in the sense of %s" % \
+              (self.kanji, self.sens))
 
     def check(self, answer):
         return answer.lower().strip() in self.answers
 
     def body(self):
-        print "(VocabKStoR) %s as %s" % (self.kanji, self.sens)
+        print("(VocabKStoR) %s as %s" % (self.kanji, self.sens))
         for (keb, sense), rebs in self.entries:
-            print "Entry [" + ', '.join(keb[2]) + ']:'
+            print("Entry [" + ', '.join(keb[2]) + ']:')
             for info in keb[1]:
-                print "Info: " + info
-            print "Sense:"
+                print("Info: " + info)
+            print("Sense:")
             for pos in sense[6]:
-                print "Part of Speech: " + pos
+                print("Part of Speech: " + pos)
             for info in sense[1]:
-                print "Info: " + info
+                print("Info: " + info)
             for misc in sense[2]:
-                print "Misc: " + misc
+                print("Misc: " + misc)
             for field in sense[3]:
-                print "Field: " + field
+                print("Field: " + field)
             for reb in rebs:
-                print "Reading: %s [%s]" % (reb[0], ', '.join(reb[2]))
+                print("Reading: %s [%s]" % (reb[0], ', '.join(reb[2])))
                 for info in reb[1]:
-                    print "Info: " + info
-        print "Readings: " + '; '.join(self.answers)
+                    print("Info: " + info)
+        print("Readings: " + '; '.join(self.answers))
 
 def addVocabSet(qs):
     dictRoot = xml.parse("../BigDataFiles/JMdict_e.xml").getroot()

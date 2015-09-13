@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-import cPickle as pickle
+import pickle as pickle
 import os
 import time
 from pprint import pprint
 from collections import defaultdict
 import itertools, functools
 
-from questions.grammarQuestions import *
-import questions.japQuestions as jap
-import questions.vocabQuestions as voc
+from .questions.grammarQuestions import *
+from . import questions.japQuestions as jap
+from . import questions.vocabQuestions as voc
 
 entities = """\
 <!ENTITY MA "martial arts term">
@@ -267,41 +267,41 @@ for i in range(len(inter)):
 revMap.default_factory = None
 
 def display_from_revMap(word):
-    print "Word:", word
+    print("Word:", word)
     ents = []
     for pos in revMap[word]:
         for rep, rank in revMap[word][pos]:
             ents.append((rep, rank, pos))
-    ents.sort(key=lambda (rep, rank, pos):(rank, pos, rep))
+    ents.sort(key=lambda rep_rank_pos:(rep_rank_pos[1], rep_rank_pos[2], rep_rank_pos[0]))
     for rank, rep, pos in ents:
-        print rank, rep, pos
+        print(rank, rep, pos)
 
 def display_from_dictionary(word):
-    print "Word:", word
+    print("Word:", word)
     values, group, rank = dictionary[word]
-    print "Group:", group
-    print "Rank:", rank
-    print "Values:"
+    print("Group:", group)
+    print("Rank:", rank)
+    print("Values:")
     for val in values:
-        print val
+        print(val)
 
 def add(word):
     if word not in revMap:
-        print word, "not found"
+        print(word, "not found")
         return
     display_from_revMap(word)
     if word in dictionary:
-        print word, "already added"
+        print(word, "already added")
         display_from_dictionary(word)
         return
     dic_word = revMap[word]
     if len(dic_word) > 1:
-        print "Multiple POS"
+        print("Multiple POS")
         pos = 'G' + '.'.join(sorted(
-            raw_input("Choose POS (ex: n.vs): ").split('.')))
+            input("Choose POS (ex: n.vs): ").split('.')))
     else:
-        pos = dic_word.keys()[0]
-        print "POS:", pos
+        pos = list(dic_word.keys())[0]
+        print("POS:", pos)
     posset = set(pos[1:].split('.'))
     values = set()
     excluded = False
@@ -311,30 +311,30 @@ def add(word):
         else:
             excluded = True
     if len(values) == 0:
-        print "No matches"
+        print("No matches")
         return
     if excluded:
         word = word + "[" + pos[1:] + "]"
-        print "Some values excluded."
-        print "Word prompt:", word
-        print "New values:"
-        for val, rank in sorted(values, key=lambda (val,rank):rank):
-            print rank, val
+        print("Some values excluded.")
+        print("Word prompt:", word)
+        print("New values:")
+        for val, rank in sorted(values, key=lambda val_rank:val_rank[1]):
+            print(rank, val)
     if len(values) == 1:
-        print "Exactly one match, adding"
+        print("Exactly one match, adding")
         val, rank = list(values)[0]
         dictionary[word] = ([val,], pos, rank)
         display_from_dictionary(word)
         return
     else:
-        print "Multiple matches"
+        print("Multiple matches")
         values = dict(values)
         val = None
         while val not in values:
-            val = raw_input("Select primary: ")
-        print "adding"
+            val = input("Select primary: ")
+        print("adding")
         rank = values[val]
-        dictionary[word] = (sorted(values.keys(),
+        dictionary[word] = (sorted(list(values.keys()),
                                    key=lambda v:-1 if v == val else values[v]),
                             pos, rank)
         display_from_dictionary(word)
