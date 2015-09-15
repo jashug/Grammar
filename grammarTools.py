@@ -229,31 +229,27 @@ poss, possets = computePos(inter)
 rposs, rpossets = computePos(inter[:10000])
 
 def posCategories(possets):
-    categories = defaultdict(list)
-    def name(pset):
-        return ''+'.'.join(sorted(pset))
-    def value(pset):
-        return 'G'+'.'.join(sorted(pset))
+    categories = defaultdict(set)
     for pset in possets:
-        for i in range(1, len(pset)+1):
-            for subset in itertools.combinations(pset, i):
-                categories[name(subset)].append(value(pset))
+        for part in pset:
+            categories[part].add(frozenset(pset))
     return dict(categories)
 
 categories = {
-    'noun': ['n', 'n-adv', 'n-suf', 'n-pref', 'n-t'],
-    'verb': ['aux-v', 'iv', 'v-unspec', 'v1', 'v1-s',
-             'v2a-s', 'v2b-k', 'v2b-s', 'v2d-k', 'v2d-s',
-             'v2g-k', 'v2g-s', 'v2h-k', 'v2h-s', 'v2k-k',
-             'v2k-s', 'v2m-k', 'v2m-s', 'v2n-s', 'v2r-k',
-             'v2r-s', 'v2s-s', 'v2t-k', 'v2t-s', 'v2w-s',
-             'v2y-k', 'v2y-s', 'v2z-s', 'v4b', 'v4g', 'v4h', 'v4k',
-             'v4m', 'v4n', 'v4r', 'v4s', 'v4t', 'v5aru', 'v5b',
-             'v5g', 'v5k', 'v5k-s', 'v5m', 'v5n', 'v5r', 'v5r-i',
-             'v5s', 'v5t', 'v5u', 'v5u-s', 'v5uru', 'vi', 'vk',
-             'vn', 'vr', 'vs', 'vs-c', 'vs-i', 'vs-s', 'vt', 'vz'],
+    'noun': set(['n', 'n-adv', 'n-suf', 'n-pref', 'n-t']),
+    'verb': set(['aux-v', 'iv', 'v-unspec', 'v1', 'v1-s',
+                 'v2a-s', 'v2b-k', 'v2b-s', 'v2d-k', 'v2d-s',
+                 'v2g-k', 'v2g-s', 'v2h-k', 'v2h-s', 'v2k-k',
+                 'v2k-s', 'v2m-k', 'v2m-s', 'v2n-s', 'v2r-k',
+                 'v2r-s', 'v2s-s', 'v2t-k', 'v2t-s', 'v2w-s',
+                 'v2y-k', 'v2y-s', 'v2z-s', 'v4b', 'v4g', 'v4h', 'v4k',
+                 'v4m', 'v4n', 'v4r', 'v4s', 'v4t', 'v5aru', 'v5b',
+                 'v5g', 'v5k', 'v5k-s', 'v5m', 'v5n', 'v5r', 'v5r-i',
+                 'v5s', 'v5t', 'v5u', 'v5u-s', 'v5uru', 'vi', 'vk',
+                 'vn', 'vr', 'vs', 'vs-c', 'vs-i', 'vs-s', 'vt', 'vz',
+                ]),
 }
-#categories.update(posCategories(possets))
+categories.update(posCategories(possets))
 
 revMap = defaultdict(lambda :defaultdict(set))
 for i in range(len(inter)):
@@ -301,11 +297,10 @@ def add(word):
     else:
         pos = frozenset(list(dic_word.keys())[0])
         print("POS:", pos)
-    posset = set(pos[1:].split('.'))
     values = set()
     excluded = False
     for pos2 in dic_word:
-        if posset.issubset(set(pos2[1:].split('.'))):
+        if pos.issubset(pos2):
             values.update(dic_word[pos2])
         else:
             excluded = True
@@ -313,7 +308,7 @@ def add(word):
         print("No matches")
         return
     if excluded:
-        word = word + "[" + pos[1:] + "]"
+        word = word + "[" + '.'.join(pos) + "]"
         print("Some values excluded.")
         print("Word prompt:", word)
         print("New values:")

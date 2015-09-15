@@ -29,14 +29,15 @@ class CategoryPack(object):
     def get_new_question(self, time):
         simple_questions = self.get_simple_question(time)
         next(simple_questions)
-        def get_full_question(category, use_immature=True):
+        def get_full_question(category, data, use_immature=True):
             q = simple_questions.send((category, use_immature))
             question_factory = self.context[q]
-            sub_categories = question_factory.child_categories(category)
-            question = question_factory(*[get_full_question(sub_category)
-                                          for sub_category in sub_categories])
+            sub_categories = question_factory.child_categories(*data)
+            children = [get_full_question(sub_category, sub_data)
+                        for sub_category, sub_data in sub_categories]
+            question = question_factory(*children)
             return question
-        return get_full_question(ANY, False)
+        return get_full_question(ANY, (), False)
 
     def get_question(self, time):
         if self.stack:

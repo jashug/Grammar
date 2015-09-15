@@ -3,9 +3,25 @@
 import pickle
 import base64
 import copy
+import enum
 from collections import defaultdict
 from textwrap import dedent
-from question_basics import CategoryQuestion, Literal, uid, Tag, NONE
+from question_basics import CategoryQuestion, Literal, uid, Category
+
+class GramamrCategory(object):
+    def __init__(self, groups, predicate_type):
+        self.groups = set(groups)
+        self.predicate_type = predicate_type
+
+    def __repr__(self):
+        return "GrammarCategory(%r, %r)" % (self.groups, self.predicate_type)
+
+    def __call__(self, group):
+        return group in self.groups
+
+class PredicateTypes(enum.Enum):
+    pass
+any_predicate = set(PredicateTypes)
 
 class TranslationQuestion(CategoryQuestion):
     @property
@@ -22,7 +38,7 @@ class WordQuestion(TranslationQuestion):
         self.body = ("The word '%s' can be translated as:\n" % word +
                      '\n'.join(values))
 
-    def child_categories(self, category):
+    def child_categories(self, predicate=any_predicate):
         return ()
 
     def __call__(self):
@@ -30,93 +46,89 @@ class WordQuestion(TranslationQuestion):
         super(WordQuestion, self).__init__()
         return self
 
-class ConjugatableQuestion(TranslationQuestion):
-    def __init__(self, word, values, suffix):
-        self.q = 'Conj.'+uid(word)
-        self.values = values
-        self.suffix = suffix
-        self.rep = word
-        assert all(val.endswith(suffix) for val in values)
-        stems = [val[:-len(suffix)] for val in values]
-        self.parts = [Literal(stems), Literal([suffix])]
-        self.body = ("The word '%s' can be translated as:\n" % word +
-                     '\n'.join(values))
+##class ConjugatableQuestion(TranslationQuestion):
+##    def __init__(self, word, values, suffix):
+##        self.q = 'Conj.'+uid(word)
+##        self.values = values
+##        self.suffix = suffix
+##        self.rep = word
+##        assert all(val.endswith(suffix) for val in values)
+##        stems = [val[:-len(suffix)] for val in values]
+##        self.parts = [Literal(stems), Literal([suffix])]
+##        self.body = ("The word '%s' can be translated as:\n" % word +
+##                     '\n'.join(values))
+##
+##    def child_categories(self, predicate=any_predicate):
+##        return ()
+##
+##    def __call__(self):
+##        self = copy.deepcopy(self)
+##        super(ConjugatableQuestion, self).__init__()
+##        return self
 
-    def child_categories(self, category):
-        return ()
-
-    def __call__(self):
-        self = copy.deepcopy(self)
-        super(ConjugatableQuestion, self).__init__()
-        return self
-
-class Declarative(TranslationQuestion):
-    q = "DeclareDa"
-    body = "Declare 'is X' with 'Xだ'."
-    group = frozenset(('undec',))
-    def __init__(self, obj):
-        super().__init__(obj)
-        self.rep = "is %s" % obj.rep
-        self.parts = [obj, Literal(['だ'])]
-
-    @staticmethod
-    def child_categories(category):
-        return (global_filters['noun'],)
-
-class NegativeNoun(TranslationQuestion):
-    q = "NegNoun"
-    body = dedent("""\
-        Form 'is not X' with 'Xでわない' or 'Xじゃない'.
-        Xじゃない is the more casual form.""")
-    group = frozenset(('neg', 'noun'))
-    def __init__(self, obj):
-        super().__init__(obj)
-        self.rep = "not %s" % obj.rep
-        self.parts = [obj,
-                      Literal(['でわ', 'じゃ']),
-                      Literal(['ない'])]
-
-    @staticmethod
-    def child_categories(category):
-        return (global_filters['noun'],)
-
-class PastNoun(TranslationQuestion):
-    q = "PastNoun"
-    body = "Form 'was X' with 'Xだった'."
-    group = frozenset(('undec',))
-    def __init__(self, obj):
-        super().__init__(obj)
-        self.rep = "was %s" % obj.rep
-        self.parts = [obj, Literal(['だった'])]
-
-    @staticmethod
-    def child_categories(category):
-        return (global_filters['noun'],)
-
-class NegPast(TranslationQuestion):
-    q = "NegPast"
-    body = dedent("""\
-        The negative form of just about everything ends in 'ない'.
-        Form 'not X (past)' from 'not X' by replacing
-        'ない' with 'なかった'.""")
-    group = frozenset(('negpast'))
-    def __init__(self, obj):
-        super().__init__(obj)
-        self.rep = "%s (past)" % obj.rep
-        if obj.parts[-1].values != ['ない',]:
-            print(obj, obj.parts, obj.parts[-1].values)
-        assert obj.parts[-1].values == ['ない',]
-        self.parts = obj.parts[:-1] + [Literal(['なかった',])]
-
-    @staticmethod
-    def child_categories(category):
-        return (category.without('negpast') & Tag('neg'),)
+##class Declarative(TranslationQuestion):
+##    q = "DeclareDa"
+##    body = "Declare 'is X' with 'Xだ'."
+##    group = frozenset(('undec',))
+##    def __init__(self, obj):
+##        super().__init__(obj)
+##        self.rep = "is %s" % obj.rep
+##        self.parts = [obj, Literal(['だ'])]
+##
+##    @staticmethod
+##    def child_categories(predicate=any_predicate):
+##        return ((global_filters['noun'], ()),)
+##
+##class NegativeNoun(TranslationQuestion):
+##    q = "NegNoun"
+##    body = dedent("""\
+##        Form 'is not X' with 'Xでわない' or 'Xじゃない'.
+##        Xじゃない is the more casual form.""")
+##    group = frozenset(('neg', 'noun'))
+##    def __init__(self, obj):
+##        super().__init__(obj)
+##        self.rep = "not %s" % obj.rep
+##        self.parts = [obj,
+##                      Literal(['でわ', 'じゃ']),
+##                      Literal(['ない'])]
+##
+##    @staticmethod
+##    def child_categories(predicate=any_predicate):
+##        return ((global_filters['noun'], ()),)
+##
+##class PastNoun(TranslationQuestion):
+##    q = "PastNoun"
+##    body = "Form 'was X' with 'Xだった'."
+##    group = frozenset(('undec',))
+##    def __init__(self, obj):
+##        super().__init__(obj)
+##        self.rep = "was %s" % obj.rep
+##        self.parts = [obj, Literal(['だった'])]
+##
+##    @staticmethod
+##    def child_categories(predicate=any_predicate):
+##        return ((global_filters['noun'], ()),)
+##
+##class NegPast(TranslationQuestion):
+##    q = "NegPast"
+##    body = dedent("""\
+##        The negative form of just about everything ends in 'ない'.
+##        Form 'not X (past)' from 'not X' by replacing
+##        'ない' with 'なかった'.""")
+##    group = frozenset(('negpast'))
+##    def __init__(self, obj):
+##        super().__init__(obj)
+##        self.rep = "%s (past)" % obj.rep
+##        if obj.parts[-1].values != ['ない',]:
+##            print(obj, obj.parts, obj.parts[-1].values)
+##        assert obj.parts[-1].values == ['ない',]
+##        self.parts = obj.parts[:-1] + [Literal(['なかった',])]
+##
+##    @staticmethod
+##    def child_categories(predicate=any_predicate):
+##        return (category.without('negpast') & Tag('neg'),)
 
 grammar = [
-    Declarative,
-    NegativeNoun,
-    PastNoun,
-    NegPast,
 ]
 global_categories = {
 }
@@ -147,9 +159,7 @@ def addQuestions(qs, dictCache=None):
     for cat in categories:
         expand(categories, cat)
     for cat in categories:
-        global_filters[cat] = NONE
-        for tag in categories[cat]:
-            global_filters[cat] = global_filters[cat] | Tag(tag)
+        global_filters[cat] = Category(categories[cat])
 
     dictionary_list = []
     rank_dict = {}
