@@ -56,22 +56,26 @@ class CategoryPack(object):
         for child in recursive_children(question):
             self.feed.mark(child.q)
         if self.stack_failure(question):
-            self.stack.clear()
-        second_chance = self.second_chance(question)
+            while self.stack:
+                stack_question, failed_before = self.stack.pop()
+                if failed_before:
+                    self.record_simple(stack_question.q, False, time)
+                else:
+                    for child in recursive_children(stack_question):
+                        self.record_simple(child.q, False, time)
+        would_get_second_chance = self.second_chance(question)
         if self.stack:
             self.stack.pop()
-        if correct:
-            for child in recursive_children(question):
-                self.record_simple(child.q, True, time)
-        else:
-            if second_chance:
+        if would_get_second_chance:
+            if correct:
+                for child in recursive_children(question):
+                    self.record_simple(child.q, True, time)
+            else:
                 self.stack.append((question, True))
                 for child in reversed(question.children):
                     self.stack.append((child, False))
-            else:
-                self.record_simple(question.q, False, time)
-                for child in recursive_children(question, False):
-                    self.record_simple(child.q, True, time)
+        else:
+            self.record_simple(question.q, correct, time)
         if persist:
             self.persist.record(question, correct, time)
         return correct

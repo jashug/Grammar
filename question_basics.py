@@ -38,7 +38,13 @@ def destringify(q, context):
     question = parse(q)
     return question
 
-ANY = lambda group: True
+class AnyCategory(object):
+    def __str__(self):
+        return "ANY"
+
+    def __call__(self, group):
+        return True
+ANY = AnyCategory()
 
 class Category(object):
     def __init__(self, groups):
@@ -46,6 +52,9 @@ class Category(object):
 
     def __repr__(self):
         return "Category(%r)" % self.groups
+
+    def __str__(self):
+        return str(self.groups)
 
     def __call__(self, group):
         return group in self.groups

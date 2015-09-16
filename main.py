@@ -22,7 +22,11 @@ def main():
 
     print("Welcome to the Quiz program (2.0)")
     pack.stats(time.time())
-    input("Press enter to begin.")
+    try:
+        input("Press enter to begin.")
+    except KeyboardInterrupt:
+        print("Stopped.")
+        return
 
     start = time.time()
     total, wrong = 0, 0
@@ -38,7 +42,9 @@ def main():
                             print("New Question:")
                             print(child.body)
                     print(question.prompt)
-                    ans = input()
+                    ans = ""
+                    while ans == "":
+                        ans = input()
                     correct = question.check(ans)
                     if correct:
                         print("Correct!")
