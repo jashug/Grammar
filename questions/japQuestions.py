@@ -72,7 +72,7 @@ def addJapaneseQuestions(qs, vocabCache=None, pruneVocab=True):
     #            missing.add(kanji)
     #if missing: print ''.join(sorted(missing))
     #assert len(missing) == 0
-    
+
     for i in range(len(orderedVocab)):
         q = orderedVocab[i]
         question = qs[q]
@@ -105,7 +105,6 @@ def addJapaneseQuestions(qs, vocabCache=None, pruneVocab=True):
 ##        tot += len(ks) + len(vqs)
 ##        print "Total: %d"%tot
 ##        #print ''.join(ks)
-        
 
     return (sorted(ordered, key=lambda q:rank[q]),
             [q for q in orderedKanji if q in qs],
