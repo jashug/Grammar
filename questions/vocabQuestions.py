@@ -1,3 +1,4 @@
+import os.path
 import xml.etree.ElementTree as xml
 from collections import defaultdict, namedtuple
 import base64
@@ -10,89 +11,89 @@ from question_basics import (
 class VocabRtoSQuestion(SimpleLeafQuestion):
     def __init__(self, read, pairs):
         super().__init__()
-        self.read = read
+        self.head = read
         answers = set()
         for pair in pairs:
             answers.update(pair.sense.glosses)
         self.verifier = EnglishVerifier(answers)
         self.entries = defaultdict(list)
-        for sreb, sense in pairs:
-            assert sreb.reb == self.read
-            if sense not in self.entries[sreb]:
-                self.entries[sreb].append(sense)
+        for pair in pairs:
+            assert pair.reb.reb == self.head
+            if pair.sense not in self.entries[pair.reb]:
+                self.entries[pair.reb].append(pair.sense)
 
     @property
     def prompt(self):
-        return "VocabRtoS: What does %s mean?" % self.read
+        return "VocabRtoS: What does %s mean?" % self.head
 
     @property
     def body(self):
-        return ("(VocabRtoS) %s\n" % self.read +
-                '\n'.join("Entry [%s]:\n" % ', '.join(sreb.pris) +
-                          ''.join("Info: \n" + info for info in sreb.infos) +
-                          ''.join(sense.body for sense in senses)
-                          for sreb, senses in self.entries.items()) +
+        return ("(VocabRtoS) %s\n" % self.head +
+                ''.join("Entry [%s]:\n" % ', '.join(reb.pris) +
+                        ''.join("Info: \n" + info for info in reb.infos) +
+                        ''.join(sense.body for sense in senses)
+                        for reb, senses in self.entries.items()) +
                 "Meanings: %s\n" % '; '.join(self.verifier.values))
 
     @property
     def q(self):
-        return "vocabRS%s"%uid(self.read)
+        return "vocabRS%s"%uid(self.head)
 
 class VocabKtoSQuestion(SimpleLeafQuestion):
     def __init__(self, kanji, tris):
         super().__init__()
-        self.kanji = kanji
+        self.head = kanji
         answers = set()
         for tri in tris:
             answers.update(tri.sense.glosses)
         self.verifier = EnglishVerifier(answers)
         self.entries = defaultdict(list)
         for tri in tris:
-            assert tri.keb.keb == self.kanji
+            assert tri.keb.keb == self.head
             if tri.sense not in self.entries[tri.keb]:
                 self.entries[tri.keb].append(tri.sense)
 
     @property
     def q(self):
-        return "vocabKS.%s" % uid(self.kanji)
+        return "vocabKS.%s" % uid(self.head)
 
     @property
     def prompt(self):
-        return "VocabKtoS: What does %s mean?" % self.kanji
+        return "VocabKtoS: What does %s mean?" % self.head
 
     @property
     def body(self):
-        return ("(VocabKtoS) %s\n" % self.kanji +
-                '\n'.join("Entry [%s]:\n" % ', '.join(keb.pris) +
-                          ''.join("Info: \n" + info for info in keb.infos) +
-                          ''.join(sense.body for sense in senses)
-                          for keb, senses in self.entries.items()) +
+        return ("(VocabKtoS) %s\n" % self.head +
+                ''.join("Entry [%s]:\n" % ', '.join(keb.pris) +
+                        ''.join("Info: \n" + info for info in keb.infos) +
+                        ''.join(sense.body for sense in senses)
+                        for keb, senses in self.entries.items()) +
                 "Meanings: %s\n" % '; '.join(self.verifier.values))
 
 class VocabKtoRQuestion(SimpleLeafQuestion):
     def __init__(self, kanji, tris):
         super().__init__()
-        self.kanji = kanji
+        self.head = kanji
         answers = set(tri.reb.reb for tri in tris)
         self.verifier = SimpleVerifier(answers)
         self.entries = defaultdict(list)
         for tri in tris:
-            assert tri.keb.keb == self.kanji
+            assert tri.keb.keb == self.head
             if tri.reb not in self.entries[tri.keb]:
                 self.entries[tri.keb].append(tri.reb)
 
     @property
     def q(self):
-        return "vocabKR.%s" % uid(self.kanji)
+        return "vocabKR.%s" % uid(self.head)
 
     @property
     def prompt(self):
-        return "VocabKtoR: How is %s read?" % self.kanji
+        return "VocabKtoR: How is %s read?" % self.head
 
     @property
     def body(self):
-        return ("(VocabKtoR) %s\n" % self.kanji +
-                '\n'.join("Entry [%s]:\n" % ', '.join(keb.pris) +
+        return ("(VocabKtoR) %s\n" % self.head +
+                ''.join("Entry [%s]:\n" % ', '.join(keb.pris) +
                           ''.join("Info: %s\n" % info for info in keb.infos) +
                           ''.join("Reading: %s " % reb.reb +
                                   '[%s]\n' % ', '.join(reb.pris) +
@@ -160,12 +161,15 @@ class Sense(namedtuple("Sense", ["glosses", "infos", "miscs", "fields",
             senses.append(sense)
         return senses
 
-Pair = namedtuple("Pair", ["sreb", "sense"])
+Pair = namedtuple("Pair", ["reb", "sense"])
 Triple = namedtuple("Triple", ["keb", "reb", "sense"])
 
+USUALLY_KANA = "word usually written using kana alone"
 def parse_vocab():
     Reading = namedtuple("Reading", ["keb", "reb"])
-    dictRoot = xml.parse("../BigDataFiles/JMdict_e.xml").getroot()
+    path = os.path.join(os.path.dirname(__file__), '..', '..',
+                        'BigDataFiles', 'JMdict_e.xml')
+    dictRoot = xml.parse(path).getroot()
     pairs = []
     triples = []
     for e in dictRoot.iterfind("entry"):
@@ -195,15 +199,17 @@ def parse_vocab():
         readings = []
         for reb in rebs:
             for keb in kebs:
-                if keb.keb not in reb.restrs and not reb.nokanji:
+                if ((not reb.restrs or keb.keb in reb.restrs)
+                    and not reb.nokanji):
+                    # Reading applies
                     readings.append(Reading(keb,reb))
 
         for sense in senses:
-            for sreb in singleReadings:
+            for reb in singleReadings:
                 if ((not sense.stagks and not sense.stagrs) or
-                    sreb.reb in sense.stagrs):
+                    reb.reb in sense.stagrs):
                     # This sense applies to the reb
-                    pairs.append(Pair(sreb, sense))
+                    pairs.append(Pair(reb, sense))
         for sense in senses:
             for reading in readings:
                 if ((not sense.stagks or reading.keb.keb in sense.stagks) and
@@ -213,10 +219,11 @@ def parse_vocab():
 
 def make_questions(pairs, triples):
     rPairs = defaultdict(list)
-    for pair in pairs:
-        rPairs[pair.sreb.reb].append(pair)
     kTris = defaultdict(list)
+    for pair in pairs:
+        rPairs[pair.reb.reb].append(pair)
     for tri in triples:
+        rPairs[tri.reb.reb].append(tri)
         kTris[tri.keb.keb].append(tri)
 
 ##    # equivalent to (nf, news, ichi, spec, gai)
@@ -239,6 +246,6 @@ def make_questions(pairs, triples):
 
 def get_vocab():
     pairs, triples = parse_vocab()
-    pairs = [pair for pair in pairs if pair.sreb.pris]
+    pairs = [pair for pair in pairs if pair.reb.pris]
     triples = [tri for tri in triples if tri.keb.pris and tri.reb.pris]
     return make_questions(pairs, triples)
