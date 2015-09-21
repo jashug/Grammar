@@ -101,8 +101,13 @@ class Category(object):
         return group in self.groups
 
 class CategoryQuestion(object):
+    group = "CategoryQuestion"
+    
     def __init__(self, *children):
         self.children = children
+
+    def child_categories(self):
+        return ()
 
     def check(self, ans):
         loc = set([0])
@@ -121,9 +126,6 @@ class SimpleLeafQuestion(CategoryQuestion):
     @property
     def parts(self):
         return [self.verifier,]
-
-    def child_categories(self):
-        return ()
 
     def __call__(self):
         return self

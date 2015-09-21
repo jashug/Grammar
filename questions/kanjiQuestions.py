@@ -9,19 +9,19 @@ from question_basics import (
 class KanaQuestion(SimpleLeafQuestion):
     def __init__(self, kana, spellings):
         super().__init__()
-        self.kana = kana
-        assert len(self.kana) == 1
+        self.head = kana
+        assert len(kana) == 1
         self.verifier = EnglishVerifier(spellings)
 
     @property
     def prompt(self):
-        return "Kana: Spell %s." % self.kana
+        return "Kana: How is %s spelled?" % self.head
 
     @property
     def body(self):
-        return ("(Kana) %s\n" % self.kana +
-                "%s\n" % unicodedata.name(self.kana).title() +
-                "Spelled: %s\n" % '; '.join(self.verifier.values))
+        return ("(Kana) %s\n" % self.head +
+                "%s\n" % unicodedata.name(self.head).title() +
+                "Spelled: %s" % '; '.join(self.verifier.values))
 
     @property
     def q(self):
@@ -30,30 +30,56 @@ class KanaQuestion(SimpleLeafQuestion):
 class YoonQuestion(SimpleLeafQuestion):
     def __init__(self, yoon, spellings):
         super().__init__()
-        self.yoon = yoon
-        assert len(self.yoon) == 2
+        self.head = yoon
+        assert len(yoon) == 2
         self.verifier = EnglishVerifier(spellings)
 
     @property
     def prompt(self):
-        return "Kana: Spell %s." % self.yoon
+        return "Kana: How is %s spelled?" % self.head
 
     @property
     def body(self):
-        return ("(Yoon) %s\n" % self.yoon +
-                "Spelled: %s\n" % '; '.join(self.verifier.values))
+        return ("(Yoon) %s\n" % self.head +
+                "Spelled: %s" % '; '.join(self.verifier.values))
 
     @property
     def q(self):
-        return "yoon%d.%d" % (ord(self.yoon[0]), ord(self.yoon[1]))
+        return "yoon%d.%d" % (ord(self.head[0]), ord(self.head[1]))
 
-class DoubledConsonantQuestion(CategoryQuestion):
-    prompt = "Kana: What is っ?"
-    verifier = EnglishVerifier(["double consonant",])
-    body = ("(Kana) っ\n" +
-            "Double the following consonant. ずっと(zutto)\n" +
-            "Meanings: %s\n" % '; '.join(verifier.values))
-    q = "kana%d" % ord('っ')
+class DoubledConsonantHiraganaQuestion(CategoryQuestion):
+    head = 'っ'
+    prompt = "Kana: What does %s mean?" % head
+    verifier = EnglishVerifier(["hiragana double consonant",])
+    body = ("(Kana) %s\n" % head +
+            "Double the following consonant (Hiragana).\n" +
+            "Example: ずっと is spelled zutto\n" +
+            "Meanings: %s" % '; '.join(verifier.values))
+    q = "kana%d" % ord(head)
+    parts = [verifier,]
+
+class DoubledConsonantKatakanaQuestion(CategoryQuestion):
+    head = 'ッ'
+    prompt = "Kana: What does %s mean?" % head
+    verifier = EnglishVerifier(["katakana double consonant",])
+    body = ("(Kana) %s\n" % head +
+            "Double the following consonant (Katakana).\n" +
+            "Example: ズット is spelled zutto\n" +
+            "Meanings: %s" % '; '.join(verifier.values))
+    q = "kana%d" % ord(head)
+    parts = [verifier,]
+
+class LongVowelQuestion(CategoryQuestion):
+    head = 'ー'
+    prompt = "Kana: What does %s mean?" % head
+    verifier = EnglishVerifier(["long vowel", "katakana long vowel"])
+    body = ("(Kana) %s\n" % head +
+            "Make the previous vowel long.\n" +
+            "Hiragana usually extends the vowel with あいう(えお)\n" +
+            "Example: nannbaa(number) could be written ナンバー or なんばあ.\n" +
+            "Meanings: %s" % '; '.join(verifier.values))
+    q = "kana%d" % ord(head)
+    parts = [verifier,]
 
 kana = [
     ('あ', 'ア', ('a',)),
@@ -165,6 +191,16 @@ yoon = [
     ('ぴょ', 'ピョ', ('pyo',)),
 ]
 
+def iterate_with_yoon(s):
+    i = 0
+    while i < len(s):
+        if i + 1 < len(s) and s[i + 1] in "ゃゅょャュョ":
+            yield s[i:i+2]
+            i += 2
+        else:
+            yield s[i:i+1]
+            i += 1
+
 def get_kana():
     questions = []
     for hiragana, katakana, spellings in kana:
@@ -173,7 +209,9 @@ def get_kana():
     for hiragana, katakana, spellings in yoon:
         questions.append(YoonQuestion(hiragana, spellings))
         questions.append(YoonQuestion(katakana, spellings))
-    questions.append(DoubledConsonantQuestion)
+    questions.append(DoubledConsonantHiraganaQuestion)
+    questions.append(DoubledConsonantKatakanaQuestion)
+    questions.append(LongVowelQuestion)
     return questions
 
 class KanjiToEnglishQuestion(SimpleLeafQuestion):
@@ -181,8 +219,8 @@ class KanjiToEnglishQuestion(SimpleLeafQuestion):
                  jlpt=-1, grade=99,
                  freq=999999, stroke_count=None):
         super().__init__()
-        self.literal = literal
-        assert len(self.literal) == 1
+        self.head = literal
+        assert len(literal) == 1
         self.answers = answers
         self.verifier # check satisfiability
         self.jlpt = jlpt
@@ -197,20 +235,20 @@ class KanjiToEnglishQuestion(SimpleLeafQuestion):
 
     @property
     def prompt(self):
-        return "Kanji: What does %s mean?" % self.literal
+        return "Kanji: What does %s mean?" % self.head
 
     @property
     def body(self):
-        return ("(Kanji) %s\n" % self.literal +
+        return ("(Kanji) %s\n" % self.head +
                 "JLPT: %d, " % self.jlpt +
                 "Grade: %d, " % self.grade +
                 "Strokes: %d, " % self.strokes +
                 "Freq: %d\n" % self.freq +
-                "Meanings:\n%s\n" % "\n".join(self.answers))
+                "Meanings:\n%s" % "\n".join(self.answers))
 
     @property
     def q(self):
-        return "kanji%d" % ord(self.literal)
+        return "kanji%d" % ord(self.head)
 
     @classmethod
     def from_xml(cls, element):
@@ -232,6 +270,17 @@ class KanjiToEnglishQuestion(SimpleLeafQuestion):
         kwargs['stroke_count'] = int(misc.find("stroke_count").text)
         return cls(literal, answers, **kwargs)
 
+class RepetitionMarkQuestion(CategoryQuestion):
+    head = '々'
+    prompt = "Kanji: What does %s mean?" % head
+    verifier = EnglishVerifier(["repeated kanji",])
+    body = ("(Kanji) %s\n" % head +
+            "Repeat the previous kanji (sometimes voiced).\n" +
+            "Example: 人々　is read ひとびと\n" +
+            "Meanings:\n%s" % '\n'.join(verifier.values))
+    q = "kanji%d" % ord(head)
+    parts = [verifier,]
+
 def get_kanji():
     path = os.path.join(os.path.dirname(__file__), '..', '..',
                         'BigDataFiles', 'kanjidic2.xml')
@@ -246,5 +295,6 @@ def get_kanji():
             continue
         question = KanjiToEnglishQuestion.from_xml(element)
         ordered.append(question)
+    ordered.append(RepetitionMarkQuestion)
     #print("Unsatisfiable:", unsatisfiable)
     return ordered

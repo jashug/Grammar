@@ -33,7 +33,7 @@ class VocabRtoSQuestion(SimpleLeafQuestion):
                         ''.join("Info: \n" + info for info in reb.infos) +
                         ''.join(sense.body for sense in senses)
                         for reb, senses in self.entries.items()) +
-                "Meanings: %s\n" % '; '.join(self.verifier.values))
+                "Meanings: %s" % '; '.join(self.verifier.values))
 
     @property
     def q(self):
@@ -68,7 +68,7 @@ class VocabKtoSQuestion(SimpleLeafQuestion):
                         ''.join("Info: \n" + info for info in keb.infos) +
                         ''.join(sense.body for sense in senses)
                         for keb, senses in self.entries.items()) +
-                "Meanings: %s\n" % '; '.join(self.verifier.values))
+                "Meanings: %s" % '; '.join(self.verifier.values))
 
 class VocabKtoRQuestion(SimpleLeafQuestion):
     def __init__(self, kanji, tris):
@@ -101,7 +101,7 @@ class VocabKtoRQuestion(SimpleLeafQuestion):
                                           for info in reb.infos)
                                   for reb in rebs)
                           for keb, rebs in self.entries.items()) +
-                "Readings: %s\n" % '; '.join(self.verifier.values))
+                "Readings: %s" % '; '.join(self.verifier.values))
 
 class KanjiElement(namedtuple("KanjiElement", ["keb", "infos", "pris"])):
     __slots__ = ()
