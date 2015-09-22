@@ -1,23 +1,16 @@
 # coding=utf-8
 
+import os.path
 import pickle
 import base64
 import copy
 import enum
 from collections import defaultdict
 from textwrap import dedent
-from question_basics import CategoryQuestion, Literal, uid, Category
-
-class GramamrCategory(object):
-    def __init__(self, groups, predicate_type):
-        self.groups = set(groups)
-        self.predicate_type = predicate_type
-
-    def __repr__(self):
-        return "GrammarCategory(%r, %r)" % (self.groups, self.predicate_type)
-
-    def __call__(self, group):
-        return group in self.groups
+from question_basics import (
+    CategoryQuestion, Literal, uid, Category,
+    SimpleLeafQuestion,
+    )
 
 class PredicateTypes(enum.Enum):
     NOUN = 'n'
@@ -28,26 +21,24 @@ class TranslationQuestion(CategoryQuestion):
     def prompt(self):
         return "Translate: %s" % self.rep
 
-class WordQuestion(TranslationQuestion):
+class WordQuestion(SimpleLeafQuestion, TranslationQuestion):
     def __init__(self, word, values, group):
-        self.q = 'Word.'+uid(word)
         self.group = group
-        self.values = values
+        self.verifier = Literal(values)
         self.rep = word
-        self.parts = [Literal(values)]
-        self.body = dedent("""\
-            New word: '%s'.
-            Part of speech: %s.
-            Translations:
-            """ % (word, group)) + '\n'.join(values)
 
-    def child_categories(self, predicate=any_predicate):
-        return ()
+    @property
+    def q(self):
+        return 'Word.'+uid(self.rep)
 
-    def __call__(self):
-        self = copy.deepcopy(self)
-        super(WordQuestion, self).__init__()
-        return self
+    @property
+    def body(self):
+        return ("Word: %s\n" % self.rep +
+                "Part of speech: %s\n" % set(self.group) +
+                "Translation: %s" % self.verifier.values[0] +
+                ("\nAlternate Translations: %s" %
+                 '; '.join(self.verifier.values[1:])
+                 if len(self.verifier.values) > 1 else ""))
 
 ##class ConjugatableQuestion(TranslationQuestion):
 ##    def __init__(self, word, values, suffix):
@@ -74,7 +65,7 @@ class Declarative(TranslationQuestion):
     body = dedent("""\
         Declare a sentence 'X (declared)' by saying 'Xだ'.
         The sentence must end in an unconjugated noun or na-adjective.""")
-    group = None
+    group = frozenset()
     def __init__(self, obj):
         super().__init__(obj)
         self.rep = "is %s" % obj.rep
@@ -82,7 +73,7 @@ class Declarative(TranslationQuestion):
 
     @staticmethod
     def child_categories(predicate=any_predicate):
-        return ((filters['noun'], (PredicateTypes.NOUN,)),)
+        return ((categories['noun'], (PredicateTypes.NOUN,)),)
 
 class NegativeNoun(TranslationQuestion):
     q = "NegNoun"
@@ -101,12 +92,12 @@ class NegativeNoun(TranslationQuestion):
 
     @staticmethod
     def child_categories(predicate=any_predicate):
-        return ((filters['noun'], ()),)
+        return ((categories['noun'], ()),)
 
 class PastNoun(TranslationQuestion):
     q = "PastNoun"
     body = "Form the past tense of a noun: 'X (past)' with 'Xだった'."
-    group = None
+    group = frozenset()
     def __init__(self, obj):
         super().__init__(obj)
         self.rep = "%s (past)" % obj.rep
@@ -114,14 +105,14 @@ class PastNoun(TranslationQuestion):
 
     @staticmethod
     def child_categories(predicate=any_predicate):
-        return ((filters['noun'], ()),)
+        return ((categories['noun'], ()),)
 
 class PastIAdj(TranslationQuestion):
     q = "PastIAdj"
     body = dedent("""\
         Form the past tense of an i-adjective: "X (past)" by
         replacing the 'い' with 'かった'.""")
-    group = None
+    group = frozenset()
     def __init__(self, obj):
         super().__init__(obj)
         self.rep = "%s (past)" % obj.rep
@@ -132,7 +123,7 @@ class PastIAdj(TranslationQuestion):
 
     @staticmethod
     def child_categories(predicate=any_predicate):
-        return ((filters['adj-i'], ()),)
+        return ((categories['adj-i'], ()),)
 
 grammar = [
     Declarative,
@@ -140,10 +131,22 @@ grammar = [
     PastNoun,
     PastIAdj,
 ]
-global_categories = {
-}
-filters = {}
 
+general_categories = {
+    'noun': {'n', 'n-adv', 'n-suf', 'n-pref', 'n-t'},
+    'verb': {'aux-v', 'iv', 'v-unspec', 'v1', 'v1-s',
+             'v2a-s', 'v2b-k', 'v2b-s', 'v2d-k', 'v2d-s',
+             'v2g-k', 'v2g-s', 'v2h-k', 'v2h-s', 'v2k-k',
+             'v2k-s', 'v2m-k', 'v2m-s', 'v2n-s', 'v2r-k',
+             'v2r-s', 'v2s-s', 'v2t-k', 'v2t-s', 'v2w-s',
+             'v2y-k', 'v2y-s', 'v2z-s', 'v4b', 'v4g', 'v4h', 'v4k',
+             'v4m', 'v4n', 'v4r', 'v4s', 'v4t', 'v5aru', 'v5b',
+             'v5g', 'v5k', 'v5k-s', 'v5m', 'v5n', 'v5r', 'v5r-i',
+             'v5s', 'v5t', 'v5u', 'v5u-s', 'v5uru', 'vi', 'vk',
+             'vn', 'vr', 'vs', 'vs-c', 'vs-i', 'vs-s', 'vt', 'vz',
+            },
+}
+categories = {}
 def expand(categories, cat):
     if cat in categories:
         new = set()
@@ -153,51 +156,53 @@ def expand(categories, cat):
         return new
     else:
         return set([cat])
+def setup_categories(groups):
+    categories.clear()
+    categories.update(general_categories)
+    groups = set(groups)
+    for group in groups:
+        for part in group:
+            assert part not in general_categories
+            if part not in categories:
+                categories[part] = set()
+            categories[part].add(group)
+    for cat in categories:
+        expand(categories, cat)
+    for cat in categories:
+        categories[cat] = Category(categories[cat])
+groups_path = os.path.join(os.path.dirname(__file__), 'groups.pkl')
+def save_groups(groups):
+    with open(groups_path, 'wb') as f:
+        pickle.dump(groups, f)
+def load_groups():
+    try:
+        with open(groups_path, 'rb') as f:
+            groups = pickle.load(f)
+    except FileNotFoundError:
+        print("No groups found")
+        groups = set()
+    return groups
+groups = load_groups()
+setup_categories(groups)
 
 suffixes = {
 }
 
-def addQuestions(qs, dictCache=None):
-    categories = global_categories.copy()
-    if dictCache is None:
-        raise Exception("Need Cache")
-    with open(dictCache, 'rb') as f:
-        dictionary, baseCategories = pickle.load(f)
-    for cat in baseCategories:
-        assert cat not in categories
-        categories[cat] = baseCategories[cat]
-    for cat in categories:
-        expand(categories, cat)
-    for cat in categories:
-        filters[cat] = Category(categories[cat])
-
-    dictionary_list = []
-    rank_dict = {}
+def get_questions():
+    path = os.path.join(os.path.dirname(__file__), 'grammarPickle.pkl')
+    with open(path, 'rb') as f:
+        dictionary = pickle.load(f)
+    words = []
+    groups = set()
     for word in dictionary:
-        values, group, rank = dictionary[word]
-        dictionary_list.append((word, values, group))
-        rank_dict[word] = rank
-    dictionary_list.sort(key=lambda word_values_group: rank_dict[word_values_group[0]])
-
-    ordered = []
-    rank_dict = {}
-    def add(rank, question):
-        q = question.q
-        group = question.group
-        assert q not in qs
-        ordered.append((q, group))
-        rank_dict[q] = rank
-        qs[q] = question
-    for i in range(len(dictionary_list)):
-        word, values, group = dictionary_list[i]
+        values, group = dictionary[word]
         if group in suffixes:
-            question = ConjugatableQuestion(word, values, group)
+            words.append(ConjugatableQuestion(word, values, group))
         else:
-            question = WordQuestion(word, values, group)
-        add((i, 0), question)
-    for i in range(len(grammar)):
-        question = grammar[i]
-        add((1 * i, 1), question)
-    
-    ordered.sort(key=lambda q_group:rank_dict[q_group[0]])
-    return ordered
+            words.append(WordQuestion(word, values, group))
+        groups.add(group)
+    for question in grammar:
+        groups.add(question.group)
+    save_groups(groups)
+    setup_categories(groups)
+    return words, grammar

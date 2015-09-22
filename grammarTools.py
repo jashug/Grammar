@@ -6,9 +6,10 @@ from pprint import pprint
 from collections import defaultdict
 import itertools, functools
 
-from questions.grammarQuestions import *
-from questions import japQuestions as jap
+#from questions.grammarQuestions import entities
+#from questions import japQuestions as jap
 from questions import vocabQuestions as voc
+from question_basics import EnglishVerifier
 
 entities = """\
 <!ENTITY MA "martial arts term">
@@ -194,89 +195,48 @@ entities, revEntities = ({e[1][1:-1]:e[0] for e in entities},
                          {e[0]:e[1][1:-1] for e in entities})
 
 def load():
-    with open("questions/grammarPickle.pkl", 'rb') as f:
-        dictionary, oldCategories = pickle.load(f)
+    try:
+        with open("questions/grammarPickle.pkl", 'rb') as f:
+            dictionary = pickle.load(f)
+    except FileNotFoundError:
+        dictionary = {}
     return dictionary
-
-dictionary = load()
 
 def save():
     with open("questions/grammarPickle%s.pkl" %
               time.asctime().replace(' ', '_').replace(':','-'), 'wb') as f:
-        pickle.dump((dictionary, categories), f, -1)
+        pickle.dump(dictionary, f, -1)
     with open("questions/grammarPickle.pkl", 'wb') as f:
-        pickle.dump((dictionary, categories), f, -1)
+        pickle.dump(dictionary, f, -1)
 
-qs = {}
-order, kanjiOrder, vocabOrder, chunks = \
-       jap.addJapaneseQuestions(qs, "questions/vocabPickle.pkl", False)
-inter = [q for q in order if (q.startswith("vocabKS.") or
-                              q.startswith("vocabRS"))]
+dictionary = load()
 
-def computePos(inter):
-    poss = defaultdict(int)
-    possets = defaultdict(int)
-    for q in inter:
-        for entry in qs[q].entries:
-            for sense in entry[1]:
-                partsofspeech = [entities[pos] for pos in sense[-1]]
-                possets[tuple(sorted(set(partsofspeech)))] += 1
-                for pos in partsofspeech:
-                    poss[pos] += 1
-    return poss, possets
-
-poss, possets = computePos(inter)
-rposs, rpossets = computePos(inter[:10000])
-
-def posCategories(possets):
-    categories = defaultdict(set)
-    for pset in possets:
-        for part in pset:
-            categories[part].add(frozenset(pset))
-    return dict(categories)
-
-categories = {
-    'noun': {'n', 'n-adv', 'n-suf', 'n-pref', 'n-t'},
-    'verb': {'aux-v', 'iv', 'v-unspec', 'v1', 'v1-s',
-             'v2a-s', 'v2b-k', 'v2b-s', 'v2d-k', 'v2d-s',
-             'v2g-k', 'v2g-s', 'v2h-k', 'v2h-s', 'v2k-k',
-             'v2k-s', 'v2m-k', 'v2m-s', 'v2n-s', 'v2r-k',
-             'v2r-s', 'v2s-s', 'v2t-k', 'v2t-s', 'v2w-s',
-             'v2y-k', 'v2y-s', 'v2z-s', 'v4b', 'v4g', 'v4h', 'v4k',
-             'v4m', 'v4n', 'v4r', 'v4s', 'v4t', 'v5aru', 'v5b',
-             'v5g', 'v5k', 'v5k-s', 'v5m', 'v5n', 'v5r', 'v5r-i',
-             'v5s', 'v5t', 'v5u', 'v5u-s', 'v5uru', 'vi', 'vk',
-             'vn', 'vr', 'vs', 'vs-c', 'vs-i', 'vs-s', 'vt', 'vz',
-            },
-}
-categories.update(posCategories(possets))
+vocab = voc.get_vocab()
+inter = [q for q in vocab
+         if (isinstance(q, voc.VocabKtoSQuestion) or
+             isinstance(q, voc.VocabRtoSQuestion))]
 
 revMap = defaultdict(lambda :defaultdict(set))
-for i in range(len(inter)):
-    q = inter[i]
-    for entry in qs[q].entries:
-        for sense in entry[1]:
-            pos = frozenset(entities[pos] for pos in sense[-1])
-            for gloss in sense[0]:
-                gloss = voc.elimParens(gloss).lower().strip()
-                revMap[gloss][pos].add((entry[0][0], i))
+for q in inter:
+    for entry in q.entries:
+        for sense in q.entries[entry]:
+            pos = frozenset(entities[pos] for pos in sense.poss)
+            for gloss in sense.glosses:
+                gloss = EnglishVerifier.normalize(gloss)
+                revMap[gloss][pos].add(entry[0])
 revMap.default_factory = None
 
 def display_from_revMap(word):
     print("Word:", word)
     ents = []
     for pos in revMap[word]:
-        for rep, rank in revMap[word][pos]:
-            ents.append((rep, rank, pos))
-    ents.sort(key=lambda rep_rank_pos:(rep_rank_pos[1], rep_rank_pos[2], rep_rank_pos[0]))
-    for rank, rep, pos in ents:
-        print(rank, rep, pos)
+        for rep in revMap[word][pos]:
+            print(rep, set(pos))
 
 def display_from_dictionary(word):
     print("Word:", word)
-    values, group, rank = dictionary[word]
-    print("Group:", group)
-    print("Rank:", rank)
+    values, group = dictionary[word]
+    print("Group:", set(group))
     print("Values:")
     for val in values:
         print(val)
@@ -296,7 +256,7 @@ def add(word):
         pos = frozenset(input("Choose POS (ex: n.vs): ").split('.'))
     else:
         pos = frozenset(list(dic_word.keys())[0])
-        print("POS:", pos)
+        print("POS:", set(pos))
     values = set()
     excluded = False
     for pos2 in dic_word:
@@ -312,23 +272,17 @@ def add(word):
         print("Some values excluded.")
         print("Word prompt:", word)
         print("New values:")
-        for val, rank in sorted(values, key=lambda val_rank:val_rank[1]):
-            print(rank, val)
+        for val in values:
+            print(val)
     if len(values) == 1:
         print("Exactly one match, adding")
-        val, rank = list(values)[0]
-        dictionary[word] = ([val,], pos, rank)
-        display_from_dictionary(word)
-        return
+        dictionary[word] = (list(values), pos)
     else:
         print("Multiple matches")
-        values = dict(values)
         val = None
         while val not in values:
             val = input("Select primary: ")
         print("adding")
-        rank = values[val]
-        dictionary[word] = (sorted(list(values.keys()),
-                                   key=lambda v:-1 if v == val else values[v]),
-                            pos, rank)
-        display_from_dictionary(word)
+        dictionary[word] = (sorted(values, key=lambda v:0 if v == val else 1),
+                            pos)
+    display_from_dictionary(word)
