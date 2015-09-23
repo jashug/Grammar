@@ -40,6 +40,10 @@ class WordQuestion(SimpleLeafQuestion, TranslationQuestion):
                  '; '.join(self.verifier.values[1:])
                  if len(self.verifier.values) > 1 else ""))
 
+    @property
+    def primary_translation(self):
+        return self.verifier.values[0]
+
 ##class ConjugatableQuestion(TranslationQuestion):
 ##    def __init__(self, word, values, suffix):
 ##        self.q = 'Conj.'+uid(word)
