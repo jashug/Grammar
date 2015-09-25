@@ -85,7 +85,7 @@ def get_questions():
     kana = kanjiq.get_kana()
     kanji = kanjiq.get_kanji()
     vocab = vocabq.get_vocab()
-    grammar_words, grammar_concepts = grammarq.get_questions()
+    grammar_words = grammarq.get_words()
     d = {}
     for r in records:
         d[r.word] = r.count
@@ -93,14 +93,14 @@ def get_questions():
     vocab = [q for q in vocab if q.head in d]
     vocab.sort(key=lambda q:d[q.head], reverse=True)
     kanji = {q.head:q for q in kanji}
-    grammar_words = {q.primary_translation:q for q in grammar_words}
+    grammar_words = sorted(grammar_words,
+                           key=lambda q:d.get(q.primary_translation, 0),
+                           reverse=True)
+    grammar_words = grammarq.get_grammar(grammar_words)
+    grammar_words = {q.primary_translation:(q, concepts)
+                     for q, concepts in grammar_words}
     #print("Got materials.")
 
-    grammar_group_counts = {}
-    for word in grammar_words.values():
-        grammar_group_counts[word.group] = 0
-    for concept in grammar_concepts:
-        grammar_group_counts[concept.group] = 0
     used = set()
     questions = []
     def add(q):
@@ -116,31 +116,6 @@ def get_questions():
             for c2 in components[c]:
                 dfs(c2)
         questions.append(kanji[c])
-    def try_add_grammar_concept():
-        if try_add_grammar_concept.i == len(grammar_concepts):
-            return
-        grammar_question = grammar_concepts[try_add_grammar_concept.i]
-        children = [category
-                    for category, data in grammar_question.child_categories()]
-        grammar_group_counts_copy = grammar_group_counts.copy()
-        for category in children:
-            satisfied = False
-            for group in grammar_group_counts_copy:
-                if category(group):
-                    if grammar_group_counts_copy[group] > 0:
-                        satisfied = True
-                    grammar_group_counts_copy[group] -= 1
-            if not satisfied:
-                break
-        else:
-            #print(len(questions))
-            add(grammar_question)
-            #print(grammar_group_counts, grammar_group_counts_copy)
-            grammar_group_counts.clear()
-            grammar_group_counts.update(grammar_group_counts_copy)
-            grammar_group_counts[grammar_question.group] += 1
-            try_add_grammar_concept.i += 1
-    try_add_grammar_concept.i = 0
 
     for q in kana:
         add(q)
@@ -161,11 +136,12 @@ def get_questions():
         if (q.head in grammar_words and
             (isinstance(q, vocabq.VocabKtoRQuestion) or
              isinstance(q, vocabq.VocabRtoSQuestion))):
-            grammar_question = grammar_words[q.head]
+            grammar_question, grammar_concepts = grammar_words[q.head]
+            #print("Word", len(questions))
             add(grammar_question)
-            grammar_group_counts[grammar_question.group] += 1
-            try_add_grammar_concept()
-    #print(grammar_group_counts)
+            for concept in grammar_concepts:
+                #print("Concept", len(questions))
+                add(concept)
     return questions
 
 if __name__ == '__main__':

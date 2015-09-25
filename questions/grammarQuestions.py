@@ -5,12 +5,14 @@ import pickle
 import base64
 import copy
 import enum
+import itertools
 from collections import defaultdict
 from textwrap import dedent
 from question_basics import (
     CategoryQuestion, Literal, uid, Category,
     SimpleLeafQuestion,
     )
+from maxflow import SOURCE, SINK, FlowGraph
 
 class PredicateTypes(enum.Enum):
     NOUN = 'n'
@@ -192,7 +194,7 @@ setup_categories(groups)
 suffixes = {
 }
 
-def get_questions():
+def get_words():
     path = os.path.join(os.path.dirname(__file__), 'grammarPickle.pkl')
     with open(path, 'rb') as f:
         dictionary = pickle.load(f)
@@ -209,4 +211,50 @@ def get_questions():
         groups.add(question.group)
     save_groups(groups)
     setup_categories(groups)
-    return words, grammar
+    return words
+
+def get_grammar(words):
+    questions = []
+    group_counts = {group:0 for group in groups}
+    graph = FlowGraph()
+    category_counter = itertools.count()
+    def can_block(graph, category):
+        graph_copy = graph.copy()
+        target = 0
+        for group in groups:
+            if category(group) and group_counts[group] > 0:
+                graph_copy.add_edge(group, SINK, group_counts[group])
+                target += group_counts[group]
+        return graph_copy.compute_max_flow() == target
+    def add_constraint(graph, category):
+        node = next(category_counter)
+        graph.add_edge(SOURCE, node, 1)
+        for group in groups:
+            if category(group):
+                graph.add_edge(node, group, 1)
+    i = 0
+    children = None
+    for word in words:
+        #print("Word", word.prompt, word.group)
+        group_counts[word.group] += 1
+        concepts = []
+        while i < len(grammar):
+            graph_copy = graph.copy()
+            children = grammar[i].child_categories()
+            children = [category for category, data in children]
+            for category in children:
+                if can_block(graph_copy, category):
+                    break
+                add_constraint(graph_copy, category)
+            else:
+                #print("Concept", grammar[i].group)
+                concepts.append(grammar[i])
+                group_counts[grammar[i].group] += 1
+                graph = graph_copy
+                children = None
+                i += 1
+                continue
+            break
+        questions.append((word, concepts))
+    #print(group_counts)
+    return questions
