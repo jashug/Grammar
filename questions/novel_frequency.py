@@ -121,7 +121,9 @@ def get_questions():
     for q in vocab:
         if q.head in kanji and isinstance(q, vocabq.VocabKtoSQuestion):
             # prune duplicated kanji and vocabKtoS questions
-            kanji[q.head].answers += q.verifier.values
+            for value in q.verifier.values:
+                if value not in kanji[q.head].answers:
+                    kanji[q.head].answers.append(value)
             continue
         if not all(c in kana or c in kanji
                    for c in kanjiq.iterate_with_yoon(q.head)):
