@@ -25,6 +25,7 @@ class TranslationQuestion(CategoryQuestion):
 
 class WordQuestion(SimpleLeafQuestion, TranslationQuestion):
     def __init__(self, word, values, group):
+        super().__init__()
         self.group = group
         self.verifier = Literal(values)
         self.rep = word

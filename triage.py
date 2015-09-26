@@ -31,6 +31,10 @@ class Expire(object):
         self.shift(time)
         self.triage.stats(time)
 
+    def get_review_queue_size(self, time):
+        self.shift(time)
+        return self.triage.get_review_queue_size(time)
+
 class Reverse(object):
     def __init__(self):
         self.queue = Heap()
@@ -48,6 +52,9 @@ class Reverse(object):
 
     def stats(self, time):
         print("Review queue: %d" % len(self.queue))
+
+    def get_review_queue_size(self, time):
+        return len(self.queue)
 
 def ReverseTriage():
     return Expire(Reverse())
@@ -72,8 +79,8 @@ class Category(object):
             saved[group] = attempt(iters[group])
         groups, use_immature = yield
         while True:
-            (t, (q, immature)), group = min((saved[group], group)
-                                            for group in groups)
+            group = min(groups, key=lambda group:saved[group])
+            t, (q, immature) = saved[group]
             if t == float('inf') or immature and not use_immature:
                 q = StopIteration
             else:
@@ -82,6 +89,10 @@ class Category(object):
 
     def stats(self, time):
         pass
+
+    def get_review_queue_size(self, time):
+        return sum(self.groups[group].get_review_queue_size(time)
+                   for group in self.groups)
 
 def CategoryReverseTriage():
     return Category(ReverseTriage)

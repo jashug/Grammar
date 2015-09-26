@@ -1,5 +1,16 @@
 from question_basics import stringify, recursive_children, ANY
 
+class Stats(object):
+    def __init__(self, initial_questions):
+        self.total = 0
+        self.wrong = 0
+        self.initial_questions = initial_questions
+
+    def record(self, correct):
+        self.total += 1
+        if not correct:
+            self.wrong += 1
+
 class CategoryPack(object):
     def __init__(self, feed, triage, scheduler, context, persist):
         self.feed = feed
@@ -8,6 +19,7 @@ class CategoryPack(object):
         self.context = context
         self.persist = persist
         self.stack = []
+        self.stats_cache = None
 
     def get_simple_question(self, time):
         triage = self.triage.recommend(time)
@@ -81,16 +93,20 @@ class CategoryPack(object):
         return correct
 
     def record_simple(self, q, correct, time):
+        self.stats_cache.record(correct)
         group = self.feed.find(q)
         nextTime = self.scheduler.schedule(q, correct, time)
         self.triage.schedule(group, q, nextTime)
 
     def __enter__(self):
+        self.stats_cache = Stats(len(self.feed.seen))
         return self.persist.__enter__()
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self.persist.__exit__(exc_type, exc_value, exc_tb)
 
-    def stats(self, time):
-        self.triage.stats(time)
-        self.feed.stats()
+    def stats(self):
+        return (self.stats_cache.total,
+                self.stats_cache.wrong,
+                len(self.feed.seen) - self.stats_cache.initial_questions,
+                )

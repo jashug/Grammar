@@ -21,7 +21,7 @@ def main():
     load()
 
     print("Welcome to the Quiz program (2.0)")
-    pack.stats(time.time())
+    print("Review Queue:", pack.triage.get_review_queue_size(time.time()))
     try:
         input("Press enter to begin.")
     except KeyboardInterrupt:
@@ -29,7 +29,6 @@ def main():
         return
 
     start = time.time()
-    total, wrong = 0, 0
 
     with pack:
         try:
@@ -49,7 +48,7 @@ def main():
                     if correct:
                         print("Correct!")
                     else:
-                        print("Incorrect.")
+                        print("### Incorrect ###")
                         if not pack.second_chance(question):
                             print("Remember:")
                             print(question.body)
@@ -57,16 +56,14 @@ def main():
                 except StopIteration as e:
                     print("Out of cards in:", e.value)
                     break
-
-                if not correct: wrong += 1
-                total += 1
         except KeyboardInterrupt:
             print("Finished.")
 
     end = time.time()
     dt = end - start
 
-    pack.stats(time.time())
+    total, wrong, new = pack.stats()
+    print("You learned %d new problems." % new)
     print("You missed %d problems." % wrong)
     print("You answered %d problems in %d minutes %d seconds." %\
           (total, dt // 60, dt % 60))
@@ -80,14 +77,15 @@ def main():
     save()
 
 def setup():
-    from questions.grammarQuestions import addQuestions
+    from questions.novel_frequency import get_questions
     from feed import CategoryFeed
     from scheduler import Jas1Scheduler
     from triage import CategoryReverseTriage
     from pack import CategoryPack
     from persist import Persist, replay
-    qs = {}
-    ordered = addQuestions(qs, "questions/grammarPickle.pkl")
+    questions = get_questions()
+    qs = {question.q:question for question in questions}
+    ordered = [(question.q, question.group) for question in questions]
     feed = CategoryFeed(ordered)
     pack = CategoryPack(feed, CategoryReverseTriage(),
                         Jas1Scheduler(), qs, Persist("records/records.txt"))
@@ -95,23 +93,5 @@ def setup():
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
 
-def packCategoriesTest():
-    from questions.testCategoryQuestions import addQuestions
-    from feed import CategoryFeed
-    from scheduler import Jas1Scheduler
-    from triage import CategoryReverseTriage
-    from pack import CategoryPack
-    from persist import Persist, replay
-    qs = {}
-    ordered, categories = addQuestions(qs)
-    feed = CategoryFeed(ordered, categories)
-    pack = CategoryPack(feed, CategoryReverseTriage(),
-                        Jas1Scheduler(), Persist("records/records.txt"))
-    replay("records/records.txt", pack, qs)
-    with open(contextFile, 'wb') as f:
-        pickle.dump(qs, f, -1)
-    with open(cacheFile, 'wb') as f:
-        pickle.dump(pack, f, -1)
-
-setup()
+#setup()
 main()

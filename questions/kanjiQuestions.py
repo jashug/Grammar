@@ -25,7 +25,7 @@ class KanaQuestion(SimpleLeafQuestion):
 
     @property
     def q(self):
-        return "kana%d" % ord(self.kana)
+        return "kana%d" % ord(self.head)
 
 class YoonQuestion(SimpleLeafQuestion):
     def __init__(self, yoon, spellings):
