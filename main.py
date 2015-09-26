@@ -92,6 +92,3 @@ def setup():
     replay("records/records.txt", pack, qs)
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
-
-#setup()
-main()

@@ -89,9 +89,7 @@ def get_questions():
     d = {}
     for r in records:
         d[r.word] = r.count
-    # only use vocab we have frequency for (~50,000 questions)
-    vocab = [q for q in vocab if q.head in d]
-    vocab.sort(key=lambda q:d[q.head], reverse=True)
+    vocab.sort(key=lambda q:d.get(q.head, 0), reverse=True)
     kanji = {q.head:q for q in kanji}
     grammar_words = sorted(grammar_words,
                            key=lambda q:d.get(q.primary_translation, 0),

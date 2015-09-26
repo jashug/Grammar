@@ -19,7 +19,7 @@ class CategoryPack(object):
         self.context = context
         self.persist = persist
         self.stack = []
-        self.stats_cache = None
+        self.stats_cache = Stats(0)
 
     def get_simple_question(self, time):
         triage = self.triage.recommend(time)
