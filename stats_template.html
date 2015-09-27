@@ -5,12 +5,44 @@
 ####data####
 </script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
-</head>
 <style>
 progress {
   -webkit-appearance: none;
 }
 </style>
+<template id="learning-temp">
+  <progress id='progress'></progress>
+  <span id='value'></span>/<span id='max'></span>
+   = <span id='percent'></span>%
+   of <span id='title'></span>.
+  <br />
+</template>
+<script type="application/javascript">
+var learningProgressTemplate = document.getElementById('learning-temp').content;
+var LearningProgressProto = Object.create(HTMLElement.prototype);
+LearningProgressProto.createdCallback = function() {
+	var root = this.createShadowRoot();
+	var clone = document.importNode(learningProgressTemplate, true);
+	root.appendChild(clone);
+	this.attributeChangedCallback();
+};
+LearningProgressProto.attributeChangedCallback = function() {
+	var title = this.getAttribute('title');
+	var max = this.getAttribute('max');
+	var value = this.getAttribute('value');
+	this.shadowRoot.getElementById('title').innerText = title;
+	this.shadowRoot.getElementById('progress').max = max;
+	this.shadowRoot.getElementById('progress').value = value;
+	this.shadowRoot.getElementById('value').innerText = value;
+	this.shadowRoot.getElementById('max').innerText = max;
+	this.shadowRoot.getElementById('percent').innerText = Math.round(100*value/max);
+};
+document.registerElement('learning-progress', {prototype: LearningProgressProto});
+var LearningProgress = function(title, value, max) {
+	return $('<learning-progress />').attr({title:title, value:value, max:max})
+}
+</script>
+</head>
 <body>
 <script type="application/javascript">
 var data = JSON.parse(document.getElementById('data').text);
@@ -37,14 +69,12 @@ var count_seen = function(questions) {
 	}
 	return count;
 }
-var makeLearnedElement = function(title, value, max) {
-	return $("<div>"+title+" <progress value='"+value+"' max='"+max+"'></progress></div>");
-}
-$('body').append(makeLearnedElement("Total Questions", num_seen, total));
-$('body').append(makeLearnedElement("Kana", count_seen(kana), kana.length));
+$('body').append(LearningProgress('Questions', num_seen, total));
+$('body').append(LearningProgress("Kana", count_seen(kana), kana.length));
 var chunk_wrapper = $('<details><summary>By NF Chunk</summary></details>')
 for (var i = 1; i <= 49; i++) {
-	chunk_wrapper.append(makeLearnedElement("Chunk "+i, count_seen(chunks[i]), chunks[i].length));
+	chunk_wrapper.append(LearningProgress(
+		"Chunk "+i, count_seen(chunks[i]), chunks[i].length));
 }
 $('body').append(chunk_wrapper)
 </script>
