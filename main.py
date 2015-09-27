@@ -8,15 +8,15 @@ import stats
 cacheFile = os.path.join(os.path.dirname(__file__), 'records', 'pack.pkl')
 stats_path = os.path.join(os.path.dirname(__file__), 'records', 'stats.html')
 
-pack, context = None, None
+pack = None
 
 def load():
-    global pack, context
+    global pack
     if pack is None:
         with open(cacheFile, 'rb') as f:
             pack = pickle.load(f)
 
-def save():
+def save(pack):
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
     stats_html = stats.get_stats(pack)
@@ -80,7 +80,7 @@ def main():
               (100*float(total-wrong)/total,
                ("%.1f"%(float(total-wrong)/wrong)) if wrong > 0 else "inf"))
 
-    save()
+    save(pack)
 
 def setup():
     from questions.novel_frequency import get_questions
@@ -96,5 +96,4 @@ def setup():
     pack = CategoryPack(feed, CategoryReverseTriage(),
                         Jas1Scheduler(), qs, Persist("records/records.txt"))
     replay("records/records.txt", pack, qs)
-    with open(cacheFile, 'wb') as f:
-        pickle.dump(pack, f, -1)
+    save(pack)

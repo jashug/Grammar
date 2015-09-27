@@ -88,7 +88,8 @@ def get_questions():
     grammar_words = grammarq.get_words()
     d = {}
     for r in records:
-        d[r.word] = r.count
+        if r.word not in grammarq.grammar_words:
+            d[r.word] = r.count
     vocab.sort(key=lambda q:d.get(q.head, 0), reverse=True)
     kanji = {q.head:q for q in kanji}
     grammar_words = sorted(grammar_words,

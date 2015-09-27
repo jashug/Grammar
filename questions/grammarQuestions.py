@@ -47,6 +47,9 @@ class WordQuestion(SimpleLeafQuestion, TranslationQuestion):
     def primary_translation(self):
         return self.verifier.values[0]
 
+    def child_categories(self, predicate=any_predicate):
+        return ()
+
 ##class ConjugatableQuestion(TranslationQuestion):
 ##    def __init__(self, word, values, suffix):
 ##        self.q = 'Conj.'+uid(word)
@@ -259,3 +262,17 @@ def get_grammar(words):
         questions.append((word, concepts))
     #print(group_counts)
     return questions
+
+grammar_words = {
+    'の',
+    'する',
+    'ない',
+    'から',
+    'ます',
+    'たち',
+    'よ',
+    'へ',
+    'や',
+    'られる',
+    'さ',
+}
