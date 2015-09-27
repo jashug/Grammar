@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script id="data" type="application/json">
+####data####
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+</head>
+<style>
+progress {
+  -webkit-appearance: none;
+}
+</style>
+<body>
+<script type="application/javascript">
+var data = JSON.parse(document.getElementById('data').text);
+var seen = {}
+for (var i = 0; i < data.feed.seen.length; i++) {
+	seen[data.feed.seen[i]] = true;
+}
+var total = data.feed.ordered.length;
+var num_seen = data.feed.seen.length;
+kana = data.feed.ordered.filter(function(x) {return x.startsWith('kana') || x.startsWith('yoon');});
+vocab = data.feed.ordered.filter(function(x) {return x.startsWith('vocab');});
+chunks = []
+for (var i = 1; i <= 49; i++) {
+	chunks[i] = [];
+}
+for (var i = 0; i < vocab.length; i++) {
+    var q = vocab[i];
+	chunks[data.context[q].pris.nf].push(q);
+}
+var count_seen = function(questions) {
+	var count = 0;
+	for (var i = 0; i < questions.length; i++) {
+		if (seen[questions[i]]) count++;
+	}
+	return count;
+}
+var makeLearnedElement = function(title, value, max) {
+	return $("<div>"+title+" <progress value='"+value+"' max='"+max+"'></progress></div>");
+}
+$('body').append(makeLearnedElement("Total Questions", num_seen, total));
+$('body').append(makeLearnedElement("Kana", count_seen(kana), kana.length));
+var chunk_wrapper = $('<details><summary>By NF Chunk</summary></details>')
+for (var i = 1; i <= 49; i++) {
+	chunk_wrapper.append(makeLearnedElement("Chunk "+i, count_seen(chunks[i]), chunks[i].length));
+}
+$('body').append(chunk_wrapper)
+</script>
+</body>
