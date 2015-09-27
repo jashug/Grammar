@@ -6,11 +6,23 @@
 </script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <style>
-progress {
-  -webkit-appearance: none;
+learning-progress {
+  display: inline;
+}
+details>* {
+  margin-left:21px;
+}
+details>summary {
+  outline:none;
+  margin-left:initial;
 }
 </style>
 <template id="learning-temp">
+  <style>
+  progress {
+    -webkit-appearance:none;
+  }
+  </style>
   <progress id='progress'></progress>
   <span id='value'></span>/<span id='max'></span>
    = <span id='percent'></span>%
@@ -21,25 +33,25 @@ progress {
 var learningProgressTemplate = document.getElementById('learning-temp').content;
 var LearningProgressProto = Object.create(HTMLElement.prototype);
 LearningProgressProto.createdCallback = function() {
-	var root = this.createShadowRoot();
-	var clone = document.importNode(learningProgressTemplate, true);
-	root.appendChild(clone);
-	this.attributeChangedCallback();
+  var root = this.createShadowRoot();
+  var clone = document.importNode(learningProgressTemplate, true);
+  root.appendChild(clone);
+  this.attributeChangedCallback();
 };
 LearningProgressProto.attributeChangedCallback = function() {
-	var title = this.getAttribute('title');
-	var max = this.getAttribute('max');
-	var value = this.getAttribute('value');
-	this.shadowRoot.getElementById('title').innerText = title;
-	this.shadowRoot.getElementById('progress').max = max;
-	this.shadowRoot.getElementById('progress').value = value;
-	this.shadowRoot.getElementById('value').innerText = value;
-	this.shadowRoot.getElementById('max').innerText = max;
-	this.shadowRoot.getElementById('percent').innerText = Math.round(100*value/max);
+  var title = this.getAttribute('title');
+  var max = this.getAttribute('max');
+  var value = this.getAttribute('value');
+  this.shadowRoot.getElementById('title').innerText = title;
+  this.shadowRoot.getElementById('progress').max = max;
+  this.shadowRoot.getElementById('progress').value = value;
+  this.shadowRoot.getElementById('value').innerText = value;
+  this.shadowRoot.getElementById('max').innerText = max;
+  this.shadowRoot.getElementById('percent').innerText = Math.round(100*value/max);
 };
 document.registerElement('learning-progress', {prototype: LearningProgressProto});
 var LearningProgress = function(title, value, max) {
-	return $('<learning-progress />').attr({title:title, value:value, max:max})
+  return $('<learning-progress />').attr({title:title, value:value, max:max})
 }
 </script>
 </head>
@@ -48,35 +60,56 @@ var LearningProgress = function(title, value, max) {
 var data = JSON.parse(document.getElementById('data').text);
 var seen = {}
 for (var i = 0; i < data.feed.seen.length; i++) {
-	seen[data.feed.seen[i]] = true;
+  seen[data.feed.seen[i]] = true;
 }
 var total = data.feed.ordered.length;
 var num_seen = data.feed.seen.length;
 kana = data.feed.ordered.filter(function(x) {return x.startsWith('kana') || x.startsWith('yoon');});
+kanji = data.feed.ordered.filter(function(x) {return x.startsWith('kanji');});
 vocab = data.feed.ordered.filter(function(x) {return x.startsWith('vocab');});
 chunks = []
 for (var i = 1; i <= 49; i++) {
-	chunks[i] = [];
+  chunks[i] = [];
 }
 for (var i = 0; i < vocab.length; i++) {
     var q = vocab[i];
-	chunks[data.context[q].pris.nf].push(q);
+  chunks[data.context[q].pris.nf].push(q);
 }
 var count_seen = function(questions) {
-	var count = 0;
-	for (var i = 0; i < questions.length; i++) {
-		if (seen[questions[i]]) count++;
-	}
-	return count;
+  var count = 0;
+  for (var i = 0; i < questions.length; i++) {
+    if (seen[questions[i]]) count++;
+  }
+  return count;
 }
-$('body').append(LearningProgress('Questions', num_seen, total));
-$('body').append(LearningProgress("Kana", count_seen(kana), kana.length));
+var progress = function(title, questions) {
+  return LearningProgress(title, count_seen(questions), questions.length);
+}
+var detail = function(summary, children) {
+  return ($('<details></details>')
+      .html(children)
+      .prepend($('<summary></summary>').html(summary)));
+  
+}
+$('body').append(progress('Questions', data.feed.ordered));
+$('body').append(progress('Kana', kana));
+$('body').append(progress('Kanji', kanji));
+$('body').append(
+detail('Questions By NF Chunk', $.map(chunks, function(chunk, i){
+  if (chunk === undefined) return null;
+  return [
+      detail(progress("Chunk "+i, chunk), 
+        $.map(['vocabKS', 'vocabKR', 'vocabRS'], function(prefix) {
+          return progress(prefix, chunk.filter(x => x.startsWith(prefix)));
+        }))
+      ];
+})));
+/*
 var chunk_wrapper = $('<details><summary>By NF Chunk</summary></details>')
 for (var i = 1; i <= 49; i++) {
-	chunk_wrapper.append(LearningProgress(
-		"Chunk "+i, count_seen(chunks[i]), chunks[i].length));
+  chunk_wrapper.append(progress("Chunk "+i, chunks[i]));
 }
-$('body').append(chunk_wrapper)
+$('body').append(chunk_wrapper)*/
 </script>
 </body>
 </html>
