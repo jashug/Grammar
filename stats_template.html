@@ -6,10 +6,13 @@
 </script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <style>
-learning-progress {
+learning-progress, summary {
   display: inline;
 }
 details>* {
+  margin-left:42px;
+}
+details>details {
   margin-left:21px;
 }
 details>summary {
@@ -89,7 +92,6 @@ var detail = function(summary, children) {
   return ($('<details></details>')
       .html(children)
       .prepend($('<summary></summary>').html(summary)));
-  
 }
 $('body').append(progress('Questions', data.feed.ordered));
 $('body').append(progress('Kana', kana));

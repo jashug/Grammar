@@ -1,9 +1,12 @@
 import time
 import pickle as pickle
+import os.path
 
 from question_basics import recursive_children
+import stats
 
-cacheFile = "records/pack.pkl"
+cacheFile = os.path.join(os.path.dirname(__file__), 'records', 'pack.pkl')
+stats_path = os.path.join(os.path.dirname(__file__), 'records', 'stats.html')
 
 pack, context = None, None
 
@@ -75,6 +78,8 @@ def main():
                ("%.1f"%(float(total-wrong)/wrong)) if wrong > 0 else "inf"))
 
     save()
+    with open(stats_path, 'w') as f:
+        f.write(stats.get_stats(pack))
 
 def setup():
     from questions.novel_frequency import get_questions
