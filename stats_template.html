@@ -67,9 +67,10 @@ for (var i = 0; i < data.feed.seen.length; i++) {
 }
 var total = data.feed.ordered.length;
 var num_seen = data.feed.seen.length;
-kana = data.feed.ordered.filter(function(x) {return x.startsWith('kana') || x.startsWith('yoon');});
-kanji = data.feed.ordered.filter(function(x) {return x.startsWith('kanji');});
-vocab = data.feed.ordered.filter(function(x) {return x.startsWith('vocab');});
+var ordered = data.feed.ordered;
+kana = ordered.filter(function(x) {return x.startsWith('kana') || x.startsWith('yoon');});
+kanji = ordered.filter(function(x) {return x.startsWith('kanji');});
+vocab = ordered.filter(function(x) {return x.startsWith('vocab');});
 chunks = []
 for (var i = 1; i <= 49; i++) {
   chunks[i] = [];
@@ -105,6 +106,13 @@ detail('Questions By NF Chunk', $.map(chunks, function(chunk, i){
           return progress(prefix, chunk.filter(x => x.startsWith(prefix)));
         }))
       ];
+})));
+var chunk_count = 50;
+$('body').append(
+detail('Questions by ordered chunk', $.map(Array(chunk_count), function(x, i) {
+  var start = i * ordered.length / chunk_count;
+  var end = (i + 1) * ordered.length / chunk_count;
+  return progress("Chunk " + (i + 1), ordered.slice(start, end)).get();
 })));
 /*
 var chunk_wrapper = $('<details><summary>By NF Chunk</summary></details>')
