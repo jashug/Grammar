@@ -3,15 +3,16 @@ import unicodedata
 import xml.etree.cElementTree as xml
 from question_basics import (
     CategoryQuestion, SimpleLeafQuestion, uid,
-    SimpleVerifier, EnglishVerifier, UnsatisfiableError
+    SimpleVerifier, EnglishVerifier, Literal, UnsatisfiableError
     )
 
 class KanaQuestion(SimpleLeafQuestion):
+    explanation = ""
     def __init__(self, kana, spellings):
         super().__init__()
         self.head = kana
         assert len(kana) == 1
-        self.verifier = EnglishVerifier(spellings)
+        self.verifier = Literal(spellings)
 
     @property
     def prompt(self):
@@ -21,65 +22,54 @@ class KanaQuestion(SimpleLeafQuestion):
     def body(self):
         return ("(Kana) %s\n" % self.head +
                 "%s\n" % unicodedata.name(self.head).title() +
+                self.explanation +
                 "Spelled: %s" % '; '.join(self.verifier.values))
 
     @property
     def q(self):
         return "kana%d" % ord(self.head)
 
-class YoonQuestion(SimpleLeafQuestion):
-    def __init__(self, yoon, spellings):
-        super().__init__()
-        self.head = yoon
-        assert len(yoon) == 2
-        self.verifier = EnglishVerifier(spellings)
+class HiraganaYoonQuestion(KanaQuestion):
+    example_heads = 'きし'
+    def __init__(self, yoon, vowel):
+        super().__init__(yoon, ['ly' + vowel, 'xy' + vowel])
+        self.vowel = vowel
 
     @property
-    def prompt(self):
-        return "Kana: How is %s spelled?" % self.head
+    def explanation(self):
+        vowel = self.vowel
+        return ("Little y kana form yoon by palatizing the sound.\n"
+                "Example: %s can be spelled %s, %s, %s.\n" %
+                (self.example_heads[0] + self.head,
+                 'ky' + vowel, 'kily' + vowel, 'kixy' + vowel) +
+                "Example: %s can be spelled %s, %s, %s, %s, %s, %s.\n" %
+                (self.example_heads[1] + self.head,
+                 'sh' + vowel, 'sy' + vowel, 'shily' + vowel,
+                 'shixy' + vowel, 'sily' + vowel, 'sixy' + vowel))
 
-    @property
-    def body(self):
-        return ("(Yoon) %s\n" % self.head +
-                "Spelled: %s" % '; '.join(self.verifier.values))
+class KatakanaYoonQuestion(HiraganaYoonQuestion):
+    example_heads = 'キシ'
 
-    @property
-    def q(self):
-        return "yoon%d.%d" % (ord(self.head[0]), ord(self.head[1]))
+HiraganaLittleTsuQuestion = KanaQuestion('っ', ['ltsu', 'ltu', 'xtsu', 'xtu'])
+HiraganaLittleTsuQuestion.explanation = """\
+Doubles the following consonant,
+bringing the sound to the end of the preceding mora.
+Example: ずっと is spelled zutto.
+"""
+KatakanaLittleTsuQuestion = KanaQuestion('ッ', ['ltsu', 'ltu', 'xtsu', 'xtu'])
+KatakanaLittleTsuQuestion.explanation = """\
+Doubles the following consonant,
+bringing the sound to the end of the preceding mora.
+Example: ズット is spelled zutto.
+"""
 
-class DoubledConsonantHiraganaQuestion(CategoryQuestion):
-    head = 'っ'
-    prompt = "Kana: What does %s mean?" % head
-    verifier = EnglishVerifier(["hiragana double consonant",])
-    body = ("(Kana) %s\n" % head +
-            "Double the following consonant (Hiragana).\n" +
-            "Example: ずっと is spelled zutto\n" +
-            "Meanings: %s" % '; '.join(verifier.values))
-    q = "kana%d" % ord(head)
-    parts = [verifier,]
-
-class DoubledConsonantKatakanaQuestion(CategoryQuestion):
-    head = 'ッ'
-    prompt = "Kana: What does %s mean?" % head
-    verifier = EnglishVerifier(["katakana double consonant",])
-    body = ("(Kana) %s\n" % head +
-            "Double the following consonant (Katakana).\n" +
-            "Example: ズット is spelled zutto\n" +
-            "Meanings: %s" % '; '.join(verifier.values))
-    q = "kana%d" % ord(head)
-    parts = [verifier,]
-
-class LongVowelQuestion(CategoryQuestion):
-    head = 'ー'
-    prompt = "Kana: What does %s mean?" % head
-    verifier = EnglishVerifier(["long vowel", "katakana long vowel"])
-    body = ("(Kana) %s\n" % head +
-            "Make the previous vowel long.\n" +
-            "Hiragana usually extends the vowel with あいう(えお)\n" +
-            "Example: nannbaa(number) could be written ナンバー or なんばあ.\n" +
-            "Meanings: %s" % '; '.join(verifier.values))
-    q = "kana%d" % ord(head)
-    parts = [verifier,]
+LongVowelQuestion = KanaQuestion('ー', ['-',])
+LongVowelQuestion.explanation = """\
+Make the previous vowel long.
+Ususally only Katakana.
+Hiragana usually extends the vowel with あいう(えお)
+Example: nannbaa(number) could be written ナンバー or なんばあ.
+"""
 
 kana = [
     ('あ', 'ア', ('a',)),
@@ -156,61 +146,24 @@ kana = [
 ]
 
 yoon = [
-    ('きゃ', 'キャ', ('kya',)),
-    ('しゃ', 'シャ', ('sya', 'sha',)),
-    ('ちゃ', 'チャ', ('cya', 'cha',)),
-    ('にゃ', 'ニャ', ('nya',)),
-    ('ひゃ', 'ヒャ', ('hya',)),
-    ('みゃ', 'ミャ', ('mya',)),
-    ('りゃ', 'リャ', ('rya',)),
-    ('ぎゃ', 'ギャ', ('gya',)),
-    ('じゃ', 'ジャ', ('jya',)),
-    ('びゃ', 'ビャ', ('bya',)),
-    ('ぴゃ', 'ピャ', ('pya',)),
-    ('きゅ', 'キュ', ('kyu',)),
-    ('しゅ', 'シュ', ('syu', 'shu',)),
-    ('ちゅ', 'チュ', ('cyu', 'chu',)),
-    ('にゅ', 'ニュ', ('nyu',)),
-    ('ひゅ', 'ヒュ', ('hyu',)),
-    ('みゅ', 'ミュ', ('myu',)),
-    ('りゅ', 'リュ', ('ryu',)),
-    ('ぎゅ', 'ギュ', ('gyu',)),
-    ('じゅ', 'ジュ', ('jyu',)),
-    ('びゅ', 'ビュ', ('byu',)),
-    ('ぴゅ', 'ピュ', ('pyu',)),
-    ('きょ', 'キョ', ('kyo',)),
-    ('しょ', 'ショ', ('syo', 'sho',)),
-    ('ちょ', 'チョ', ('cyo', 'cho',)),
-    ('にょ', 'ニョ', ('nyo',)),
-    ('ひょ', 'ヒョ', ('byo',)),
-    ('みょ', 'ミョ', ('myo',)),
-    ('りょ', 'リョ', ('ryo',)),
-    ('ぎょ', 'ギョ', ('gyo',)),
-    ('じょ', 'ジョ', ('jyo',)),
-    ('びょ', 'ビョ', ('byo',)),
-    ('ぴょ', 'ピョ', ('pyo',)),
+    ('ゃ', 'ャ', 'a'),
+    ('ゅ', 'ュ', 'u'),
+    ('ょ', 'ョ', 'o'),
 ]
 
 def iterate_with_yoon(s):
-    i = 0
-    while i < len(s):
-        if i + 1 < len(s) and s[i + 1] in "ゃゅょャュョ":
-            yield s[i:i+2]
-            i += 2
-        else:
-            yield s[i:i+1]
-            i += 1
+    return iter(s)
 
 def get_kana():
     questions = []
     for hiragana, katakana, spellings in kana:
         questions.append(KanaQuestion(hiragana, spellings))
         questions.append(KanaQuestion(katakana, spellings))
-    for hiragana, katakana, spellings in yoon:
-        questions.append(YoonQuestion(hiragana, spellings))
-        questions.append(YoonQuestion(katakana, spellings))
-    questions.append(DoubledConsonantHiraganaQuestion)
-    questions.append(DoubledConsonantKatakanaQuestion)
+    for hiragana, katakana, vowel in yoon:
+        questions.append(HiraganaYoonQuestion(hiragana, vowel))
+        questions.append(KatakanaYoonQuestion(katakana, vowel))
+    questions.append(HiraganaLittleTsuQuestion)
+    questions.append(KatakanaLittleTsuQuestion)
     questions.append(LongVowelQuestion)
     return questions
 

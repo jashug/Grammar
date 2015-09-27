@@ -19,6 +19,9 @@ def load():
 def save():
     with open(cacheFile, 'wb') as f:
         pickle.dump(pack, f, -1)
+    stats_html = stats.get_stats(pack)
+    with open(stats_path, 'w') as f:
+        f.write(stats_html)
 
 def main():
     load()
@@ -78,8 +81,6 @@ def main():
                ("%.1f"%(float(total-wrong)/wrong)) if wrong > 0 else "inf"))
 
     save()
-    with open(stats_path, 'w') as f:
-        f.write(stats.get_stats(pack))
 
 def setup():
     from questions.novel_frequency import get_questions
