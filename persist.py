@@ -19,6 +19,16 @@ class Persist(object):
             'grade':'1' if correct else '0',
             })
 
+class DummyPersist(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+
+    def record(self, q, correct, time):
+        pass
+
 def replay(backingFile, pack, qs):
     with open(backingFile, 'r') as f:
         for line in f:
