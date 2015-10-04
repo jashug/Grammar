@@ -106,7 +106,8 @@ class CategoryQuestion(object):
     def __init__(self, *children):
         self.children = children
 
-    def child_categories(self):
+    @staticmethod
+    def child_categories():
         return ()
 
     def check(self, ans):
