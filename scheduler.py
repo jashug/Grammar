@@ -28,6 +28,33 @@ class FullRecordScheduler(object):
         self.data[q].append((time, correct))
         return self.sub.schedule(q, correct, time)
 
+class AccuracyMeasurer(object):
+    def __init__(self, sub, target_recall):
+        self.sub = sub
+        self.target_recall = target_recall
+        self.data = {}
+        self.var = 0
+        self.correct = 0
+        self.total_questions = 0
+
+    def schedule(self, q, correct, time):
+        if q in self.data:
+            last_time, requested_time = self.data[q]
+            r = self.target_recall ** ((time - last_time) /
+                                       (requested_time - last_time))
+            self.var += abs(int(correct) - r) ** 2
+            self.correct += int(correct)
+            self.total_questions += 1
+        next_time = self.sub.schedule(q, correct, time)
+        self.data[q] = (time, next_time)
+        return next_time
+
+### This is an extensively modified version of the SuperMemo 2 algorithm
+### Algorithm SM-2, © Copyright SuperMemo World, 1991.  
+### www.supermemo.com, www.supermemo.eu
+### Neither this program nor this version of the algorithm
+### are endorsed by SuperMemo World
+
 SM2Record = namedtuple('SM2Record', ('e_factor', 'interval', 'valid_after',))
 class SM2Scheduler(object):
     def __init__(self, base_interval=60, starting_E_factor=2.5,
@@ -64,3 +91,53 @@ class SM2Scheduler(object):
         if commit:
             self.data[q] = SM2Record(e_factor, interval, time + interval)
         return self.data[q].valid_after
+
+### This is my interpertation of the SuperMemo 17 algorithm
+### Algorithm SM-17 is currently under development,
+### this work is based on http://www.supermemopedia.com/wiki/Algorithm_SM-17
+### around October 2015
+### www.supermemo.com, www.supermemo.eu
+### Neither this program nor this version of the algorithm
+### are endorsed by SuperMemo World
+
+class SM17SIncRefiner(object):
+    def __init__(self, sinc):
+        self.sinc = sinc
+        self.history = defaultdict(list)
+
+    def schedule(self, q, correct, time, commit=True):
+        if commit:
+            self.history[q].append((time, correct))
+        return None # this object is not a proper scheduler
+
+    def refine_sinc(self):
+        difficulty = {q:compute_difficulty(q) for q in self.history}
+        # compute recall matrix
+        recall = None
+        for q in self.history:
+            d = difficulty[q]
+            lapsed, prelapse_r, lapse_num = True, None, 0
+            for s, interval, correct in iterate_parameters(q):
+                r = compute_r(s, interval)
+                if lapsed:
+                    pls[lapse_num, prelapse_r].record(interval, correct)
+                else:
+                    recall[d, s, r].record(correct)
+                if correct:
+                    lapsed = False
+                else:
+                    lapsed = True
+                    lapse_num += 1
+                    prelapse_r = r
+        # compute updated sinc matrix
+        new_sinc = None
+        for q in self.history:
+            d = difficulty[q]
+            for s, interval, correct in iterate_parameters(q):
+                if not correct:
+                    continue
+                r = compute_r(s, interval)
+                s2_estimated = s * self.sinc[d, s, r].value
+                s2_measured = recall[d, s2_estimated, r].s_value(interval)
+                new_sinc[d, s, r].record(s2_measured / s)
+        return new_sinc

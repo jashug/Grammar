@@ -82,35 +82,42 @@ def main():
 
     save(pack)
 
-def setup():
+def get_questions():
     from questions.novel_frequency import get_questions
+    questions = get_questions()
+    qs = {question.q:question for question in questions}
+    ordered = [(question.q, question.group) for question in questions]
+    return ordered, qs
+
+def setup():
     from feed import CategoryFeed
     from scheduler import Jas1Scheduler, SM2Scheduler
     from triage import CategoryReverseTriage
     from pack import CategoryPack
     from persist import Persist, replay
-    questions = get_questions()
-    qs = {question.q:question for question in questions}
-    ordered = [(question.q, question.group) for question in questions]
+    ordered, qs = get_questions()
     feed = CategoryFeed(ordered)
     pack = CategoryPack(feed, CategoryReverseTriage(),
-                        SM2Scheduler(), qs, Persist("records/records.txt"))
+                        SM2Scheduler(base_interval=60*5),
+                        qs, Persist("records/records.txt"))
     replay("records/records.txt", pack, qs)
     save(pack)
 
-def make_test_pack():
-    from questions.novel_frequency import get_questions
-    from feed import CategoryFeed
-    from scheduler import Jas1Scheduler, SM2Scheduler, FullRecordScheduler
-    from triage import CategoryReverseTriage
-    from pack import CategoryPack
-    from persist import DummyPersist, replay
-    questions = get_questions()
-    qs = {question.q:question for question in questions}
-    ordered = [(question.q, question.group) for question in questions]
-    feed = CategoryFeed(ordered)
-    pack = CategoryPack(feed, CategoryReverseTriage(),
-                        FullRecordScheduler(SM2Scheduler()),
-                        qs, DummyPersist())
-    replay("records/records.txt", pack, qs)
-    return pack
+import feed, scheduler, triage, pack as packs, persist
+
+##def make_test_pack():
+##    from questions.novel_frequency import get_questions
+##    from feed import CategoryFeed
+##    from scheduler import Jas1Scheduler, SM2Scheduler, FullRecordScheduler
+##    from triage import CategoryReverseTriage
+##    from pack import CategoryPack
+##    from persist import DummyPersist, replay
+##    questions = get_questions()
+##    qs = {question.q:question for question in questions}
+##    ordered = [(question.q, question.group) for question in questions]
+##    feed = CategoryFeed(ordered)
+##    pack = CategoryPack(feed, CategoryReverseTriage(),
+##                        FullRecordScheduler(SM2Scheduler()),
+##                        qs, DummyPersist())
+##    replay("records/records.txt", pack, qs)
+##    return pack
