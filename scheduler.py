@@ -80,7 +80,7 @@ class SM2Scheduler(object):
                                self.post_factor * factor * rec.interval),
                            rec.interval)
         else:
-            interval = self.base_interval
+            interval = self.base_interval * e_factor / self.starting_E_factor
         if q in self.data:
             expected_failure = rec.valid_after + rec.interval * rec.e_factor
         if not (q in self.data and
