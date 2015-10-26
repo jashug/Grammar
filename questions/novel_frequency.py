@@ -79,6 +79,14 @@ def get_components():
                 components[k].remove(rem)
     return components
 
+def get_wordlist():
+    path = os.path.join(os.path.dirname(__file__), 'wordlist.txt')
+    records = []
+    with open(path, 'r', encoding='utf_8') as f:
+        for line in f:
+            records.append(line[:-1])
+    return records
+
 def get_questions():
     records = get_freq()
     components = get_components()
@@ -86,14 +94,21 @@ def get_questions():
     kanji = kanjiq.get_kanji()
     vocab = vocabq.get_vocab()
     grammar_words = grammarq.get_words()
-    d = {}
-    for r in records:
-        if r.word not in grammarq.grammar_words:
-            d[r.word] = r.count
-    vocab.sort(key=lambda q:d.get(q.head, 0), reverse=True)
+    wordlist = get_wordlist()
+    wordlist_rank = {r:i for i, r in enumerate(wordlist)}
+    freq_rank = {r.word:r.count for r in records
+                 if r.word not in grammarq.grammar_words}
+    def rank(word):
+        return (-wordlist_rank[word]
+                if word in wordlist_rank
+                else -len(wordlist),
+                freq_rank[word]
+                if word in freq_rank
+                else 0)
+    vocab.sort(key=lambda q:rank(q.head), reverse=True)
     kanji = {q.head:q for q in kanji}
     grammar_words = sorted(grammar_words,
-                           key=lambda q:d.get(q.primary_translation, 0),
+                           key=lambda q:rank(q.primary_translation),
                            reverse=True)
     grammar_words = grammarq.get_grammar(grammar_words)
     grammar_words = {q.primary_translation:(q, concepts)
